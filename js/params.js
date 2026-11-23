@@ -1,9 +1,7 @@
 // All per-run numbers, derived from one seed. "unit" = m·Q0 is the scale of quarterly money.
 import { createRng } from './rng.js';
+import { RIVAL_NAMES } from './content.js';
 
-export const RIVAL_NAMES_PLACEHOLDER = ['Bean&Co.'];
-let rivalNames = RIVAL_NAMES_PLACEHOLDER;
-export const setRivalNames = (names) => { rivalNames = names; };
 
 const k = (x) => Math.max(1000, Math.round(x / 1000) * 1000);
 
@@ -36,7 +34,7 @@ export function generateParams(seed) {
     brand: { cost: k(t.brandCost * unit), da: t.brandDa, dLoyal: t.brandDLoyal },
     loyalty: { cost: k(t.loyaltyCost * unit), dLoyal: t.loyaltyDLoyal },
     block: { cost: k(t.blockCost * unit), dLoyal: t.blockDLoyal },
-    rival: { name: r.pick(rivalNames), rule: r.pick(['tit_for_tat', 'grim', 'best_response']) },
+    rival: { name: r.pick(RIVAL_NAMES), rule: r.pick(['tit_for_tat', 'grim', 'best_response']) },
     segments: { N: t.marketN * Q0, loyalBase: r.pick(t.loyalBase), priceDrivenShare: t.priceDrivenShare },
     ipoCash: k(t.ipoCash * unit),
   };
