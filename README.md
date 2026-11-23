@@ -1,19 +1,20 @@
-# Rumbo a la IPO
+# Rumbo a la IPO (v2)
 
-Un examen-juego de texto para la **Unidad 7 de CORE Econ, "La empresa y sus clientes"**. Cada estudiante funda una marca de café y toma decisiones de precio, costos, diferenciación y competencia. Si razona mal, quiebra. Si razona bien, llega a la IPO. Puede reintentar las veces que quiera: cada empresa nueva tiene números distintos.
+Un simulador en vivo de una fábrica de galletas para la **Unidad 7 de CORE Econ, "La empresa y sus clientes"**. El tiempo corre mes a mes y el estudiante cambia precios, publicidad, lanza productos, amplía la planta, crea ediciones (discriminación de precios) y reacciona a aranceles, recesiones, a un rival y al regulador. Su director de finanzas, una IA sarcástica llamada M.A.R.G.E.N., le explica cada golpe con una gráfica y le hace preguntas con los números de su propia partida. La meta es una IPO: una valuación sostenida por encima de la meta durante tres meses.
 
-## Cómo se califica (100 puntos, cuenta el mejor intento)
+La versión 1 (el juego de texto lineal) está guardada en la etiqueta `v1-final` del repositorio.
+
+## Cómo se califica (de 100; cuenta el mejor intento)
 
 | Componente | Puntos |
 |---|---|
-| Desenlace: IPO / venta, boutique o regulador / quiebra | 40 / 20 / 0 |
-| 8 preguntas del CFO (5 c/u; las respuestas cambian según la partida) | 40 |
-| Valor de la empresa vs. el mejor valor posible con esos números | 20 |
-| Respuesta abierta del roadshow | 0 (la lees tú; bono a tu criterio) |
+| Valuación sostenida (mínimo de 3 meses) frente a la meta de la IPO | 50 |
+| Crisis superadas: 6 meses después no quebró y sus últimos 3 meses suman utilidad | 30 |
+| Preguntas del CFO | 20 |
 
-Valor de la empresa = caja final + 8 × utilidad promedio de los últimos 2 trimestres.
+Si la partida termina en quiebra o sin IPO, las crisis se dividen entre al menos 3 y las preguntas entre al menos 6, para que quebrar rápido no regale puntos. Una partida que llega a la IPO se califica con lo que realmente enfrentó.
 
-Hay 9 finales: 3 IPO (marca premium, volumen, duopolio), 3 "honorables" (vendida al rival, boutique, el regulador te parte) y 3 quiebras (precio bajo el costo, guerra de precios, sobreinversión).
+**Calibración** (con jugadores simulados, 20 partidas por estrategia): un jugador que entiende la unidad y juega razonablemente promedia ~77 puntos y llega a la IPO en 10–35% de las partidas; uno casi óptimo llega en 60–70%; uno que nunca ajusta nada saca menos de 60. Los números se ajustan en un solo lugar: `TUNING` en `js/sim/world.js` (la meta de la IPO está en `ipoTarget`).
 
 ## Probarlo en tu computadora
 
@@ -22,59 +23,47 @@ python3 -m http.server 8000
 # abre http://localhost:8000
 ```
 
-Los módulos de JavaScript no funcionan si abres `index.html` con doble clic: hace falta un servidor (el comando de arriba basta).
+Pruebas automáticas (Node 18 o más reciente): `npm test`
 
-Pruebas automáticas (requiere Node 18 o más reciente): `npm test`
+## Actualizar el Google Sheet para la v2 (obligatorio una vez)
 
-## Conectar tu Google Sheet (una sola vez)
+La v2 escribe en una pestaña nueva, `Intentos v2`, con columnas distintas. Tu URL actual sigue sirviendo:
 
-1. Crea una Google Sheet nueva.
-2. **Extensiones → Apps Script**. Borra lo que haya y pega el contenido de `apps-script/Code.gs`. Guarda.
-3. En el editor, elige la función `setupBestTab` y presiona **Ejecutar**. Autoriza los permisos. Se crean las pestañas `Intentos` y `Mejor intento`.
-4. **Implementar → Nueva implementación → Tipo: Aplicación web**.
-   - Ejecutar como: **Yo**
-   - Quién tiene acceso: **Cualquier persona**
-5. Copia la URL que termina en `/exec` y pégala en `js/config.js`:
-   ```js
-   export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/…/exec';
-   ```
-6. (Opcional) En el mismo archivo, define los códigos de clase válidos: `export const CLASS_CODES = ['MICRO-2026'];`
+1. Abre tu Sheet → **Extensiones → Apps Script**.
+2. Borra todo el código y pega el contenido de `apps-script/Code.gs`. Guarda.
+3. Elige la función `setupBestTab` y presiona **Ejecutar**: crea `Intentos v2` y `Mejor intento v2`.
+4. **Implementar → Administrar implementaciones → ✏️ (editar) → Versión: Nueva versión → Implementar**. La URL no cambia, así que no hay que tocar `js/config.js`.
+5. Juega una partida corta y revisa que aparezca la fila en `Intentos v2`. (El juego no puede confirmar el envío por sí mismo: si no aparece la fila, revisa este paso).
 
-Cada intento terminado agrega una fila en `Intentos`. Si se envía dos veces, se ignora el duplicado. `Mejor intento` muestra el mejor total por matrícula, cuántos intentos hizo cada quien y cuántos finales descubrió. Si un estudiante no tenía internet al terminar, el resultado se guarda en su navegador y se envía la próxima vez que abra el juego.
+Las filas de la v1 se quedan en la pestaña `Intentos` y no se mezclan.
 
-## Publicarlo en GitHub Pages
+`js/config.js` también permite limitar los códigos de clase: `export const CLASS_CODES = ['MICRO-2026'];` (vacío = cualquier código).
 
-1. Sube esta carpeta a un repositorio de GitHub. En el plan gratuito, Pages requiere que el repositorio sea **público**.
-2. **Settings → Pages → Branch: `main`, carpeta `/ (root)`**.
-3. Comparte con tus estudiantes la URL que aparece ahí (por ejemplo, desde un post de "examen" en tu plataforma).
+## Editar textos
 
-## Editar los textos
+- **Todo lo que dice el CFO, los botones, las preguntas y los finales:** `js/content/copy.js`.
+- **Las explicaciones de los íconos ⓘ y el Manual del CFO:** `js/content/glossary.js`.
+- En los textos, `{x}` inserta un número, `{$x}` un monto en pesos y `[[termino]]` o `[[termino|texto]]` crea un ⓘ con la entrada del glosario.
+- Después de editar, corre `npm test`: avisa si quedó una variable o un término sin definir.
 
-Todo lo que leen los estudiantes está en **`js/content.js`**: la narración del CFO, las opciones, las preguntas y sus explicaciones, los finales, el Manual del CFO y la explicación de la calificación. `{x}` inserta un número y `{$x}` un monto en pesos. Después de editar, corre `npm test`: avisa si quedó alguna variable o texto faltante.
+## Auditar una partida sospechosa
 
-## Auditar un intento sospechoso
-
-Cada fila trae la `seed` (la semilla que generó todos los números de la partida) y un `decisionLog` con cada decisión y respuesta. Con la semilla puedes reconstruir exactamente esa partida:
+Cada fila trae la `seed` (semilla que genera todos los números de la partida) y un `log` con precios y publicidad por mes, lanzamientos, eventos y respuestas. Con la semilla se reconstruye el mundo exacto:
 
 ```bash
-node -e "import('./js/params.js').then(m => console.log(m.generateParams(SEMILLA)))"
+node -e "import('./js/sim/world.js').then(m => console.log(m.makeWorld(SEMILLA, 'premium')))"
 ```
 
-No hay login ni protección contra trampas: un estudiante con conocimientos técnicos podría enviar un resultado falso. Para un grupo de 12 es un riesgo aceptado.
+No hay login ni protección contra trampas: la calificación se calcula en el navegador. Es un riesgo aceptado para un grupo pequeño.
 
 ## Estructura
 
 ```
-index.html, css/style.css        página
-js/content.js                    TODOS los textos
-js/config.js                     URL del Apps Script y códigos de clase
-js/economy.js, params.js         modelo económico y números de cada partida
-js/rival.js                      juego de precios con el rival (CORE 7.10)
-js/engine.js, endings.js         decisiones y finales
-js/checkpoints.js                banco de preguntas del CFO
-js/scoring.js                    calificación y "mejor valor posible"
-js/game.js                       flujo de la partida
-js/ui.js, main.js, storage.js, results.js   interfaz, guardado y envío
-apps-script/Code.gs              receptor en Google Sheets
-tests/                           pruebas (npm test)
+js/sim/            simulación pura (mundo, mercado, acciones, mes, comodines, rival, regulador, valuación, finales, preguntas, calificación)
+js/content/        copy.js (todos los textos) y glossary.js (íconos ⓘ y manual)
+js/ui/             tablero, gráficas SVG, chat del CFO, reloj, pantallas
+js/main.js         une todo
+apps-script/Code.gs  receptor en Google Sheets
+tests/             pruebas, incluidos los jugadores simulados de la calibración (tests/support/bots.js)
+docs/superpowers/  diseño y plan de cada versión
 ```
