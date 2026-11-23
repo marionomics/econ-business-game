@@ -36,7 +36,7 @@ export function renderTopbar(run, ui, clock) {
     <div class="kpis">
       <div class="kpi" data-tour="cash"><small>${esc(fmt('ui.cash'))} <span data-tour="info">${infoButton('flujo_caja')}</span></small><b class="${s.cash < 0 ? 'neg' : ''}">${esc(money(s.cash))}</b></div>
       <div class="kpi" data-tour="valuation"><small>${esc(fmt('ui.valuation'))} ${infoButton('valuacion')}</small><b>${esc(money(val))}</b></div>
-      <div class="toollinks">${langSwitch()}${button({ label: fmt('ui.manual'), variant: 'ghost', size: 'sm', ico: 'book', attrs: 'data-dialog="manual"' })}
+      <div class="toollinks">${langSwitch()}${s.ended ? '' : button({ label: fmt('ui.restart'), variant: 'ghost', size: 'sm', attrs: 'data-restart' })}${button({ label: fmt('ui.manual'), variant: 'ghost', size: 'sm', ico: 'book', attrs: 'data-dialog="manual"' })}
         ${button({ label: fmt('ui.gallery'), variant: 'ghost', size: 'sm', ico: 'star', attrs: 'data-dialog="gallery"' })}</div>
     </div>
     <div class="progress" role="progressbar" aria-valuenow="${Math.round(progress * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(fmt('ui.aria.progress'))}"><i style="width:${(progress * 100).toFixed(1)}%"></i></div>

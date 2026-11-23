@@ -10,7 +10,7 @@ import { parseNumber, parseNumberCandidates, gradeAnswer } from '../answers.js';
 import { say } from './inbox.js';
 import { diagnose, crisisNav, rejectionVars } from './diagnose.js';
 import { initCoach, coachAfterAct, coachAfterStep } from './coach.js';
-import { initTutorial, tutorialPaused, tutorialBlocksAction, tutorialAfterAct, tutorialAfterStep, tutorialAfterAnswer } from './tutorial.js';
+import { initTutorial, tutorialPaused, tutorialBlocksAction, tutorialAfterAct, tutorialAfterStep, tutorialAfterAnswer, tutorialQuestionUnavailable } from './tutorial.js';
 
 export const MAX_QUESTIONS = 9;
 export const MIN_QUESTIONS = 6;
@@ -30,12 +30,13 @@ export function createRun({ seed, line, meta = {}, tutorial = false, coachSeen =
 const shownCount = (run) => run.questions.length;
 
 function trigger(run, key, ctx = {}, once = key) {
-  if (run.state.ended || run.fired[once] || shownCount(run) + run.queue.length >= MAX_QUESTIONS) return;
+  if (run.state.ended || run.fired[once] || shownCount(run) + run.queue.length >= MAX_QUESTIONS) return false;
   const q = buildFor(key, run, createRng(deriveSeed(run.seed, `q:${once}:${run.state.month}`)), ctx);
-  if (!q) return;
+  if (!q) return false;
   run.fired[once] = true;
   run.queue.push({ ...q, month: run.state.month });
   nextQuestion(run);
+  return true;
 }
 function nextQuestion(run) {
   if (run.pending !== null || !run.queue.length) return;
@@ -92,7 +93,7 @@ export function step(input) {
     else if (s.month - run.lastQuip >= 4 && createRng(deriveSeed(run.seed, `quip:${s.month}`)).next() < 0.5) { run.lastQuip = s.month; say(run, 'quip', { n: createRng(deriveSeed(run.seed, `qn:${s.month}`)).int(0, 99) }); }
   }
   const ask = tutorialAfterStep(run);
-  if (ask) trigger(run, ask.key, ask.ctx, ask.once);
+  if (ask && !trigger(run, ask.key, ask.ctx, ask.once)) tutorialQuestionUnavailable(run);
   coachAfterStep(run, events);
   compactLog(run);
   finishIfEnded(run);
@@ -133,4 +134,14 @@ export function pauseReasons(run) {
 
 function compactLog(run) {
   while (JSON.stringify(run.log).length > LOG_CAP && run.log.months.length > 1) run.log.months.shift();
+}
+
+// Saves from earlier versions lack newer fields; fill them so an old run keeps playing. Returns null for garbage.
+export function upgradeRun(saved) {
+  if (!saved || typeof saved !== 'object' || !saved.state || !saved.world || !Array.isArray(saved.inbox)) return null;
+  const run = structuredClone(saved);
+  run.tutorial ??= null;
+  run.coachSeen ??= []; run.coachQueue ??= []; run.lastCoachMonth ??= -1; run.coachActive ??= null;
+  run.state.investments ??= []; run.state.shocks ??= [];
+  return run;
 }

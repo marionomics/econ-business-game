@@ -2,6 +2,7 @@
 // except the exported actions (tutorialNext, tutorialSkipFix) that clone like the rest of the run API.
 import { say } from './inbox.js';
 import { quantityAtPrice } from './market.js';
+import { launchableTemplates } from './actions.js';
 
 export const TOUR = ['cash', 'valuation', 'clock', 'tabs', 'chat', 'info'];
 const WAITING = new Set(['tour', 'launch', 'diagnose', 'fix']);
@@ -28,10 +29,13 @@ export function tutorialSkipFix(input) {
   const run = structuredClone(input); run.tutorial.step = 'verify'; return run;
 }
 
-export const tutorialPaused = (run) => active(run) && WAITING.has(run.tutorial.step);
+// In the launch step, time only waits if a launch is actually possible (otherwise the run would freeze forever).
+const canLaunch = (run) => !run.state.repositioning && launchableTemplates(run.state, run.world).some((t) => run.state.cash >= t.launchCost);
+export const tutorialPaused = (run) => active(run) && WAITING.has(run.tutorial.step) && (run.tutorial.step !== 'launch' || canLaunch(run));
 
 export function tutorialBlocksAction(run, action) {
   if (active(run) && action.type === 'launch' && run.state.products.length >= 1) return 'act.tutorialOneProduct';
+  if (active(run) && ['tour', 'launch'].includes(run.tutorial.step) && ['expand', 'reposition', 'versions'].includes(action.type)) return 'act.tutorialFirstLaunch';
   return null;
 }
 
@@ -56,7 +60,8 @@ export function tutorialAfterStep(run) {
   if (!p || !p.active) { t.step = 'done'; return null; }
   if (t.step === 'develop') {
     const row = last?.perProduct.find((x) => x.uid === t.uid);
-    if (!row || row.inDevelopment || row.Q <= 0) return null;
+    if (!row || row.inDevelopment) return null;
+    if (row.Q <= 0) { t.step = 'done'; say(run, 'tutorial', { id: 'tut.noSales', price: p.price, a: row.a, nav: { tab: 'productos', target: `price:${t.uid}` } }); return null; }
     const optimal = Math.round((row.a + row.c) / 2);
     const optContribution = (optimal - row.c) * quantityAtPrice(p, s, run.world, optimal);
     const optProfit = Math.round(last.profit - row.contribution + optContribution);
@@ -74,13 +79,19 @@ export function tutorialAfterStep(run) {
   return null;
 }
 
-export function tutorialAfterAnswer(run, q) {
-  if (!active(run) || run.tutorial.step !== 'diagnose' || q.trigger !== 'tutorial') return;
+function afterDiagnose(run) {
   const t = run.tutorial;
-  if (near(product(run).price, t.diagnose.optimal)) { t.step = 'verify'; say(run, 'tutorial', { id: 'tut.fixAlready', optimal: t.diagnose.optimal }); return; }
+  // Already at the optimum: that is the win (comparing next month against a month already at the optimum would say "no rise").
+  if (near(product(run).price, t.diagnose.optimal)) { t.step = 'done'; say(run, 'tutorial', { id: 'tut.winAlready', optimal: t.diagnose.optimal, profit: t.diagnose.profit }); return; }
   t.step = 'fix';
   say(run, 'tutorial', { id: 'tut.fix', optimal: t.diagnose.optimal, nav: { tab: 'productos', target: `price:${t.uid}` } });
 }
+export function tutorialAfterAnswer(run, q) {
+  if (!active(run) || run.tutorial.step !== 'diagnose' || q.trigger !== 'tutorial') return;
+  afterDiagnose(run);
+}
+// The diagnose question could not be created (question cap): skip straight to the fix instead of waiting forever.
+export function tutorialQuestionUnavailable(run) { if (active(run) && run.tutorial.step === 'diagnose') afterDiagnose(run); }
 
 export function tutorialHighlight(run) {
   if (!active(run)) return null;

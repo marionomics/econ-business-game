@@ -1,10 +1,11 @@
 // Wiring: identity → strategy → live run (clock + dashboard + CFO chat) → ending → results.
-import { createRun, act, step, answer, ackEvents, pauseReasons } from './sim/run.js';
-import { tutorialNext, tutorialSkipFix, tutorialHighlight } from './sim/tutorial.js';
+import { createRun, act, step, answer, ackEvents, pauseReasons, upgradeRun } from './sim/run.js';
+import { tutorialNext, tutorialSkipFix, tutorialHighlight, tutorialPaused } from './sim/tutorial.js';
 import { coachHighlight } from './sim/coach.js';
 import { describeMessage, describeQuestion, describeFeedback, fmt, CFO_NAME } from './content/copy.js';
 import { renderTopbar, renderDashboard, messageChart } from './ui/dashboard.js';
 import { welcomeScreen, lineScreen, endingDialog, galleryDialog, manualDialog } from './ui/screens.js';
+import { dialog } from './ui/components.js';
 import { popover, richText, button } from './ui/components.js';
 import { esc, icon } from './ui/dom.js';
 import { createClock } from './ui/clock.js';
@@ -102,12 +103,16 @@ function openChat() {
 // ---------- Highlights ----------
 const TAB_OF = (target) => (target.startsWith('tab:') ? target.slice(4)
   : /^(price|ad|versions):|^launch$|^expand$/.test(target) ? 'productos' : target === 'demand-chart' ? 'mercado' : null);
+let lastHighlight = '';
 function applyHighlight(extra = null) {
   document.querySelectorAll('.spotlight').forEach((el) => el.classList.remove('spotlight'));
   if (!run || view !== 'game') return;
-  for (const target of [tutorialHighlight(run), coachHighlight(run), extra].filter(Boolean)) {
+  const targets = [tutorialHighlight(run), coachHighlight(run), extra].filter(Boolean);
+  const key = targets.join('|'), changed = key !== lastHighlight; lastHighlight = key;
+  for (const target of targets) {
     const tab = TAB_OF(target);
-    if (tab && ui.tab !== tab) { ui.tab = tab; renderDash(true, false); }
+    // Switch tabs only when the highlight changes, so the student can still browse other tabs.
+    if (tab && ui.tab !== tab && (changed || target === extra)) { ui.tab = tab; renderDash(true, false); }
     const el = document.querySelector(`[data-tour="${CSS.escape(target)}"]`);
     if (el) { el.classList.add('spotlight'); if (target === extra) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   }
@@ -140,7 +145,7 @@ function onTick() {
   afterChange();
 }
 function play() {
-  if (run.pending !== null || run.state.ended) return;
+  if (run.pending !== null || run.state.ended || pauseReasons(run).includes('tutorial')) return;
   run = ackEvents(run); save(); clock.resume(); renderTop();
 }
 function doAct(action) { run = act(run, action); afterChange(); }
@@ -160,6 +165,12 @@ function showEnding() {
   sendResult(APPS_SCRIPT_URL, buildResultRow(run, store.getGallery())).then((r) => { sendStatus = r; draw(); });
 }
 const classifyEndingSafe = () => classifyEnding(run.state);
+
+// Abandon the current run (not sent) and go back to the strategy screen.
+function restart() {
+  clock.pause('user'); store.clearCurrentRun(); run = null; endingShown = false; sendStatus = null; lastHighlight = '';
+  showLine();
+}
 
 function newRun(line) {
   const id = store.getIdentity();
@@ -195,6 +206,11 @@ document.addEventListener('click', (e) => {
   if (t.matches('[data-close-popover]')) return closePopover();
   if (t.matches('[data-close-dialog]')) { document.getElementById('overlay').innerHTML = ''; return; }
   if (t.dataset.dialog) { document.getElementById('overlay').innerHTML = t.dataset.dialog === 'manual' ? manualDialog() : galleryDialog(store.getGallery()); return; }
+  if (t.matches('[data-restart]')) { clock.pause('user'); renderTop();
+    document.getElementById('overlay').innerHTML = dialog({ title: fmt('ui.restart.title'), body: `<p>${esc(fmt('ui.restart.body'))}</p>`,
+      actions: `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">${button({ label: fmt('ui.restart.confirm'), variant: 'destructive', attrs: 'data-restart-confirm' })}${button({ label: fmt('ui.restart.cancel'), variant: 'outline', attrs: 'data-close-dialog' })}</div>` });
+    return; }
+  if (t.matches('[data-restart-confirm]')) { restart(); return; }
   if (t.matches('[data-newrun]')) { showLine(); return; }
   if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); return; }
   if (t.dataset.lang) { switchLocale(t.dataset.lang); return; }
@@ -258,7 +274,8 @@ function switchLocale(l) {
 // ---------- Start ----------
 applyLocale(store.getLocaleStore() ?? detectLocale(navigator.language));
 flushQueue(APPS_SCRIPT_URL).catch(() => {});
-run = store.loadCurrentRun();
-if (run && run.state && !run.state.ended) { clock.pause('resume'); showGame(); }
+run = upgradeRun(store.loadCurrentRun()); // saves from earlier versions are upgraded; unreadable ones are dropped
+if (!run) store.clearCurrentRun();
+if (run && !run.state.ended) { try { clock.pause(tutorialPaused(run) ? 'tutorial' : 'resume'); showGame(); } catch { store.clearCurrentRun(); run = null; showLine(); } }
 else if (store.getIdentity()) { run = null; showLine(); }
 else showWelcome();
