@@ -18,3 +18,6 @@ test('crises: survived / max(occurred, 3); open ones count against', () => {
   assert.equal(scoreRun(run({ state: { crises: cr([true, null]) } })).crisesPts, 10); });
 test('total rounded to one decimal', () => { const r = scoreRun(run({ questions: q(6, 5), state: { crises: cr([true, false, true]) } }));
   assert.equal(r.total, Math.round((25 + 20 + 20 * 5 / 6) * 10) / 10); });
+test('IPO runs are graded on the crises and questions they actually faced (no floors)', () => {
+  const r = scoreRun(run({ questions: q(4, 4), state: { ended: { reason: 'ipo' }, bestSustained: 1000, crises: cr([true, true]) } }));
+  assert.equal(r.questionsPts, 20); assert.equal(r.crisesPts, 30); assert.equal(r.total, 100); });

@@ -4,8 +4,8 @@ export const CRISIS_MONTHS = 6;
 const effect = (s, e) => { s.effects.push(e); };
 export const WILDCARDS = {
   arancel: { crisis: true, apply: (s, w) => { effect(s, { kind: 'cost', add: w.tariff }); s.shocks.push({ id: 'arancel', month: s.month, kind: 'cost' }); } },
-  renta: { crisis: true, apply: (s, w) => { effect(s, { kind: 'fixed', add: w.rent }); s.shocks.push({ id: 'renta', month: s.month, kind: 'cost' }); } },
-  salud: { crisis: true, apply: (s) => { effect(s, { kind: 'demand', segment: s.line, mult: 0.75, until: s.month + 6 }); s.shocks.push({ id: 'salud', month: s.month, kind: 'demand', until: s.month + 6 }); } },
+  renta: { crisis: true, apply: (s, w) => { effect(s, { kind: 'fixed', add: w.rent }); s.shocks.push({ id: 'renta', month: s.month, kind: 'fixed' }); } },
+  salud: { crisis: true, apply: (s) => { effect(s, { kind: 'demand', segment: s.line, mult: 0.8, until: s.month + 6 }); s.shocks.push({ id: 'salud', month: s.month, kind: 'demand', until: s.month + 6 }); } },
   recesion: { crisis: true, apply: (s) => { effect(s, { kind: 'demand', segment: 'all', mult: 0.85, until: s.month + 6 }); s.shocks.push({ id: 'recesion', month: s.month, kind: 'demand', until: s.month + 6 }); } },
   marca_blanca: { crisis: true, line: 'generico', apply: (s) => { effect(s, { kind: 'demand', segment: 'generico', mult: 0.8 }); s.shocks.push({ id: 'marca_blanca', month: s.month, kind: 'demand' }); } },
   viral: { crisis: false, apply: (s, w, params) => {
@@ -40,8 +40,9 @@ export function openCrisis(s, id) { s.crises.push({ id, start: s.month, survived
 
 // Resolve due crises (and all open ones if the run ended). Runs after profit and the end checks.
 export function resolveCrises(s, events) {
-  const last = s.history[s.history.length - 1];
-  const ok = !(s.ended && s.ended.reason === 'bankrupt') && last && last.profit > 0;
+  // Survived: not bankrupt and profitable over the last three months (one launch month doesn't decide it).
+  const recent = s.history.slice(-3).reduce((t, h) => t + h.profit, 0);
+  const ok = !(s.ended && s.ended.reason === 'bankrupt') && s.history.length > 0 && recent > 0;
   for (const c of s.crises) {
     if (c.survived !== null) continue;
     if (s.ended || s.month >= c.start + CRISIS_MONTHS) {

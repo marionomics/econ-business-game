@@ -12,7 +12,7 @@ export const MAX_MONTHS = 36;
 function sell(p, s, world) {
   const d = productDemand(p, s, world), c = productCost(p, s, world);
   const R = s.rival.active ? s.rival.prices[p.uid] ?? null : null;
-  const qAt = (P) => Math.round(quantityAt(d, P) * rivalShare(P, R, p.loyalty));
+  const qAt = (P) => Math.round(quantityAt(d, P) * rivalShare(P, R, p.loyalty, world.rival?.reach ?? 1));
   let Q, contribution, revenue, P = p.price;
   if (p.versions) {
     const qHigh = qAt(p.versions.high), qAll = qAt(p.versions.low);

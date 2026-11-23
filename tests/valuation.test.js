@@ -44,10 +44,29 @@ test('classifyEnding rules', () => {
   assert.equal(classifyEnding(bk({ shocks: [{ id: 'salud', month: 1, kind: 'demand', until: 7 }] }, rows), w), 'quiebra_demanda');
   assert.equal(classifyEnding(bk({ rival: { active: true, since: 1, avgPriceAtArrival: 120, prices: {} }, products: [{ uid: 'p1', active: true, price: 100, versions: null }] }), w), 'quiebra_guerra');
   assert.equal(classifyEnding(bk({ investments: [{ month: 1, amount: 1e7 }] }), w), 'quiebra_expansion');
-  assert.equal(classifyEnding(bk({}), w), 'quiebra_publicidad');
+  assert.equal(classifyEnding(bk({}, [row(-1, { ads: 50000, perProduct: [pp()] })]), w), 'quiebra_publicidad');
+  assert.equal(classifyEnding(bk({}), w), 'quiebra_expansion'); // fallback: costs bigger than sales
   assert.equal(classifyEnding(st([row(5)], { ended: { reason: 'end36' } }), w), 'comprada');
   assert.equal(classifyEnding(st([row(-5)], { ended: { reason: 'end36' } }), w), 'fin_sin_ipo');
 });
 test('launch and expansion are recorded as investments', () => {
   const s = applyAction({ ...initialState(w), cash: 1e7 }, w, { type: 'launch', templateId: w.templates[0].id }).state;
   assert.deepEqual(s.investments, [{ month: 0, amount: w.templates[0].launchCost, type: 'launch' }]); });
+test('a rent rise (fixed cost) is never blamed for not raising prices', () => {
+  const rows = [row(1, { perProduct: [pp({ P: 100 })] }), row(-1, { perProduct: [pp({ P: 100 })] })];
+  const s = st(rows, { ended: { reason: 'bankrupt' }, shocks: [{ id: 'renta', month: 1, kind: 'fixed' }] });
+  assert.notEqual(classifyEnding(s, w), 'quiebra_choque_costos'); });
+test('the rent wildcard records a fixed-cost shock', async () => {
+  const { WILDCARDS } = await import('../js/sim/wildcards.js'); const s = { month: 3, effects: [], shocks: [] };
+  WILDCARDS.renta.apply(s, { rent: 10 }); assert.equal(s.shocks[0].kind, 'fixed'); });
+test('heavy advertising is blamed before a demand shock; a price war before a cost shock', () => {
+  const bk = (o, rows) => st(rows, { ended: { reason: 'bankrupt' }, ...o });
+  assert.equal(classifyEnding(bk({ shocks: [{ id: 'recesion', month: 1, kind: 'demand', until: 9 }] }, [row(-1, { ads: 50000, perProduct: [pp()] })]), w), 'quiebra_publicidad');
+  const war = { rival: { active: true, since: 1, avgPriceAtArrival: 120, prices: {} }, products: [{ uid: 'p1', active: true, price: 100, versions: null }],
+    shocks: [{ id: 'arancel', month: 1, kind: 'cost' }] };
+  assert.equal(classifyEnding(bk(war, [row(1, { perProduct: [pp({ P: 100 })] }), row(-1, { perProduct: [pp({ P: 100 })] })]), w), 'quiebra_guerra');
+});
+test('a cost shock up to 12 months back is still blamed if prices never rose since', () => {
+  const rows = Array.from({ length: 12 }, (_, i) => row(i < 11 ? 1 : -1, { month: i + 1, perProduct: [pp({ P: 100 })] }));
+  const s = st(rows, { month: 12, ended: { reason: 'bankrupt' }, shocks: [{ id: 'arancel', month: 2, kind: 'cost' }] });
+  assert.equal(classifyEnding(s, w), 'quiebra_choque_costos'); });

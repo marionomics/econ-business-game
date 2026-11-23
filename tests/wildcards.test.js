@@ -26,7 +26,7 @@ test('health study lowers demand only for its segment and expires after 6 months
   const w = base('premium', [{ id: 'salud', month: 5, params: {} }]); let s = to(firm(w), w, 4);
   const a0 = productDemand(s.products[0], s, w).a; s = to(s, w, 5);
   assert.ok(productDemand(s.products[0], s, w).a < a0);
-  const generic = { ...s.products[0], segment: 'generico', uid: 'x' }; assert.equal(productDemand(generic, { ...s, products: [generic] }, w).a, Math.round(generic.a0 * (1 + generic.adEff * Math.sqrt(generic.adStock / 1000))));
+  const generic = { ...s.products[0], segment: 'generico', uid: 'x' }; assert.equal(productDemand(generic, { ...s, products: [generic] }, w).a, Math.round(generic.a0 * (1 + generic.adMax * (1 - Math.exp(-generic.adStock / generic.adScale)))));
   s = to(s, w, 11); assert.equal(productDemand(s.products[0], s, w).a, a0); });
 test('wildcard events are emitted and crises opened', () => {
   const w = base('premium', [{ id: 'recesion', month: 3, params: {} }]); let s = to(firm(w), w, 2);
@@ -34,7 +34,13 @@ test('wildcard events are emitted and crises opened', () => {
   assert.deepEqual(r.state.crises.map(c => [c.id, c.start, c.survived]), [['recesion', 3, null]]); });
 test('crisis resolves 6 months later by the rule', () => {
   const w = base('premium', [{ id: 'renta', month: 3, params: {} }]); const s = to(firm(w), w, 9);
-  const c = s.crises[0]; assert.equal(c.resolvedAt, 9); assert.equal(c.survived, s.history.at(-1).profit > 0); });
+  const c = s.crises[0]; assert.equal(c.resolvedAt, 9);
+  assert.equal(c.survived, s.history.slice(-3).reduce((t, h) => t + h.profit, 0) > 0); });
+test('one bad month does not fail a crisis if the last three months are profitable overall', async () => {
+  const { resolveCrises } = await import('../js/sim/wildcards.js');
+  const s = { month: 9, ended: null, crises: [{ id: 'renta', start: 3, survived: null, resolvedAt: null }],
+    history: [{ profit: 50000 }, { profit: 40000 }, { profit: -5000 }] };
+  resolveCrises(s, []); assert.equal(s.crises[0].survived, true); });
 test('a crisis open at bankruptcy resolves as not survived', () => {
   const w = base('premium', [{ id: 'renta', month: 3, params: {} }]); let s = to(firm(w), w, 4); s = { ...s, cash: 1, products: s.products.map(p => ({ ...p, price: 1 })) };
   s = tick(s, w).state; assert.equal(s.ended.reason, 'bankrupt'); assert.equal(s.crises[0].survived, false); });

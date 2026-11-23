@@ -8,7 +8,7 @@ const myPrice = (p) => (p.versions ? p.versions.low : p.price);
 
 export function rivalProfitAt(p, s, w, R) {
   const d = productDemand(p, s, w);
-  const q = quantityAt(d, R) * (1 - rivalShare(myPrice(p), R, p.loyalty));
+  const q = quantityAt(d, R) * (1 - rivalShare(myPrice(p), R, p.loyalty, w.rival.reach ?? 1));
   return (R - rivalCost(p, s, w)) * q;
 }
 

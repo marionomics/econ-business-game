@@ -4,7 +4,7 @@ import { productDemand, productCost, rivalShare, quantity, surplus, elasticityAt
 import { quantityAt } from '../js/economy.js';
 
 const world = { saturation: 0.75 };
-const prod = (o = {}) => ({ uid: 'p1', segment: 'premium', a0: 160, b: 0.05, cProd: 40, adEff: 0.045, loyaltyEff: 0.05,
+const prod = (o = {}) => ({ uid: 'p1', segment: 'premium', a0: 160, b: 0.05, cProd: 40, adMax: 0.5, adScale: 40000, loyaltyEff: 0.05,
   price: 100, ad: 0, adStock: 0, loyalty: 0, readyAt: 0, active: true, versions: null, ...o });
 const st = (products, o = {}) => ({ month: 5, products, effects: [], expansions: 0, rival: { active: false, prices: {} }, ...o });
 
@@ -34,3 +34,8 @@ test('surplus matches Beautiful Cars', () => { const r = surplus({ a: 40000, b: 
 test('surplus and elasticity never NaN at Q = 0', () => { const r = surplus({ a: 10, b: 1 }, 50, 5);
   for (const v of Object.values(r)) assert.ok(Number.isFinite(v)); assert.ok(Number.isFinite(elasticityAt({ a: 10 }, 10)) || elasticityAt({ a: 10 }, 10) === Infinity); });
 test('elasticity P/(a−P)', () => assert.equal(elasticityAt({ a: 100 }, 60), 1.5));
+test('rival reach limits how many customers it can take', () => {
+  assert.equal(rivalShare(50, 50, 0, 0.5), 0.75); assert.equal(rivalShare(50, 50, 0, 1), 0.5);
+  assert.ok(Math.abs(rivalShare(100, 40, 0, 0.5) - 0.5) < 0.01); });
+test('advertising lift saturates at adMax', () => {
+  const huge = productDemand(prod({ adStock: 1e9 }), st([]), world).a; assert.equal(huge, Math.round(160 * 1.5)); });
