@@ -7,7 +7,7 @@ import { tick } from '../js/sim/tick.js';
 import { quantityAt } from '../js/economy.js';
 
 // A world with no wildcards and a late rival, so finances are predictable.
-const calm = (line = 'premium') => ({ ...makeWorld(7, line), wildcards: [], rival: { arrivalMonth: 99, rule: 'match', costFactor: 1 } });
+const calm = (line = 'premium') => ({ ...makeWorld(7, line), wildcards: [], rival: { arrivalMonth: 99, rule: 'match', costFactor: 1 }, regulator: { ...makeWorld(7, line).regulator, shareThreshold: 2 } });
 const run = (s, w, n) => { for (let i = 0; i < n; i++) s = tick(s, w).state; return s; };
 const withProduct = (w, ad = 0) => { let s = initialState(w); s = applyAction(s, w, { type: 'launch', templateId: w.templates[0].id }).state;
   return ad ? applyAction(s, w, { type: 'setAd', uid: s.products[0].uid, ad }).state : s; };

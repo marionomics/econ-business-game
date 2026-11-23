@@ -3,6 +3,7 @@ import { quantityAt } from '../economy.js';
 import { productDemand, productCost, rivalShare, surplus, elasticityAt, fixedAdd } from './market.js';
 import { applyDueWildcards, resolveCrises } from './wildcards.js';
 import { rivalStep } from './rival.js';
+import { regulatorStep } from './regulator.js';
 
 export const MAX_MONTHS = 36;
 
@@ -60,13 +61,14 @@ export function tick(input, world) {
 
   const row = { month: s.month, revenue, cogs: revenue - contribution, contribution, fixed, ads, other: 0, profit: 0, cash: 0, perProduct };
   s.history.push(row);
+  regulatorStep(s, world, events, row);
   row.other = s.monthOther;
   row.profit = contribution - fixed - ads - row.other;
   s.cash += row.profit;
   row.cash = s.cash;
   delete s.monthOther;
 
-  if (s.cash < 0) { s.ended = { reason: 'bankrupt', month: s.month }; events.push({ type: 'bankrupt' }); }
+  if (s.cash < 0 && !s.ended) { s.ended = { reason: 'bankrupt', month: s.month }; events.push({ type: 'bankrupt' }); }
   if (!s.ended && s.month >= MAX_MONTHS) { s.ended = { reason: 'end36', month: s.month }; events.push({ type: 'end36' }); }
   resolveCrises(s, events);
   return { state: s, events };
