@@ -7,27 +7,23 @@ import { tick } from './tick.js';
 import { buildFor } from './questions.js';
 import { scoreRun } from './score.js';
 import { parseNumber, parseNumberCandidates, gradeAnswer } from '../answers.js';
+import { say } from './inbox.js';
+import { initTutorial, tutorialPaused, tutorialBlocksAction, tutorialAfterAct, tutorialAfterStep, tutorialAfterAnswer } from './tutorial.js';
 
 export const MAX_QUESTIONS = 9;
 export const MIN_QUESTIONS = 6;
 const PULSE_MONTHS = [6, 12, 18, 24, 30, 33];
-const IMPORTANT = new Set(['wildcard', 'rivalArrives', 'investigation', 'investigationClosed', 'fine', 'breakup', 'crisisResolved',
-  'ipo', 'bankrupt', 'end36', 'repositioned', 'runway']);
 const LOG_CAP = 45000;
 
-export function createRun({ seed, line, meta = {} }) {
-  const world = makeWorld(seed, line);
+export function createRun({ seed, line, meta = {}, tutorial = false }) {
+  const world = makeWorld(seed, line, { tutorial });
   const run = { runId: meta.runId ?? String(seed), seed, line, meta, world, state: initialState(world),
     inbox: [], seq: 0, unseen: 0, questions: [], queue: [], pending: null, fired: {}, inputError: false,
-    lastQuip: -99, lastRunway: -99, log: { months: [], events: [], actions: [] }, score: null };
-  say(run, 'welcome', { line });
+    lastQuip: -99, lastRunway: -99, log: { months: [], events: [], actions: [] }, score: null, tutorial: null };
+  if (tutorial) initTutorial(run); else say(run, 'welcome', { line });
   return run;
 }
 
-const say = (run, type, data = {}) => {
-  run.inbox.push({ seq: run.seq++, month: run.state.month, type, data });
-  if (IMPORTANT.has(type)) run.unseen += 1;
-};
 const shownCount = (run) => run.questions.length;
 
 function trigger(run, key, ctx = {}, once = key) {
@@ -53,18 +49,21 @@ function finishIfEnded(run) {
 export function act(input, action) {
   const run = structuredClone(input);
   if (run.state.ended) return run;
+  const blocked = tutorialBlocksAction(run, action);
+  if (blocked) { say(run, 'rejected', { reason: blocked, action: action.type }); return run; }
   const r = applyAction(run.state, run.world, action);
   if (!r.ok) { say(run, 'rejected', { reason: r.reason, action: action.type }); return run; }
   run.state = r.state;
   run.log.actions.push({ m: run.state.month, t: action.type, ...(action.templateId ? { id: action.templateId } : {}) });
-  if (action.type === 'launch') { const p = run.state.products.at(-1); trigger(run, 'launch', { uid: p.uid }, `launch:${action.templateId}`); }
+  const suppressLaunchQuestion = tutorialAfterAct(run, action);
+  if (action.type === 'launch' && !suppressLaunchQuestion) { const p = run.state.products.at(-1); trigger(run, 'launch', { uid: p.uid }, `launch:${action.templateId}`); }
   if (action.type === 'expand') trigger(run, 'expand', {}, 'expand');
   if (action.type === 'versions') trigger(run, 'versions', { uid: action.uid }, 'versions');
   return run;
 }
 
 export function step(input) {
-  if (input.pending !== null || input.state.ended) return input;
+  if (input.pending !== null || input.state.ended || tutorialPaused(input)) return input;
   const run = structuredClone(input);
   const { state, events } = tick(run.state, run.world);
   run.state = state;
@@ -85,6 +84,8 @@ export function step(input) {
     if (last?.perProduct.some((x) => !x.inDevelopment && x.Q > 0 && x.P < x.c)) { if (s.month - (run.lastBelowCost ?? -99) >= 3) { run.lastBelowCost = s.month; say(run, 'belowCost', {}); } }
     else if (s.month - run.lastQuip >= 4 && createRng(deriveSeed(run.seed, `quip:${s.month}`)).next() < 0.5) { run.lastQuip = s.month; say(run, 'quip', { n: createRng(deriveSeed(run.seed, `qn:${s.month}`)).int(0, 99) }); }
   }
+  const ask = tutorialAfterStep(run);
+  if (ask) trigger(run, ask.key, ask.ctx, ask.once);
   compactLog(run);
   finishIfEnded(run);
   return run;
@@ -105,6 +106,7 @@ export function answer(input, raw) {
   run.log.actions.push({ m: run.state.month, t: 'answer', id: q.id, ok: q.correct });
   run.pending = null;
   say(run, 'feedback', { index: run.questions.length - 1 });
+  tutorialAfterAnswer(run, q);
   nextQuestion(run);
   finishIfEnded(run);
   return run;
@@ -116,6 +118,7 @@ export function pauseReasons(run) {
   const r = [];
   if (run.pending !== null) r.push('question');
   if (run.unseen > 0) r.push('event');
+  if (tutorialPaused(run)) r.push('tutorial');
   if (run.state.ended) r.push('ended');
   return r;
 }

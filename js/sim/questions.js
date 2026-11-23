@@ -26,6 +26,9 @@ export const QUESTIONS = [
   { id: 'precio_optimo', trigger: 'launch', applies: hasProduct,
     build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, c = cost(run, p);
       return num((a + c) / 2, { uid: p.uid, a, c }); } },
+  { id: 'precio_optimo', trigger: 'tutorial', applies: hasProduct, // same question, asked by the tutorial's diagnose step
+    build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, c = cost(run, p);
+      return num((a + c) / 2, { uid: p.uid, a, c }); } },
   { id: 'utilidad_mes', trigger: 'launch', applies: hasProduct,
     build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const d = dem(run, p), c = cost(run, p), P = px(p), Q = quantityAt(d, P);
       return num((P - c) * Q, { uid: p.uid, P, Q, c }); } },

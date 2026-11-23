@@ -28,7 +28,13 @@ export const TUNING = {
   aJitter: [-4, -2, 0, 2, 4], bJitter: [0.9, 1, 1.1],
 };
 
-export function makeWorld(seed, line) {
+// In a tutorial run nothing hits before month 6, so shocks don't land on the guided first sale (spacing is kept).
+function shiftForTutorial(list, tutorial) {
+  if (!tutorial || !list.length || list[0].month >= 6) return list;
+  const d = 6 - list[0].month; return list.map((x) => ({ ...x, month: x.month + d }));
+}
+
+export function makeWorld(seed, line, { tutorial = false } = {}) {
   if (!TEMPLATES[line]) throw new Error(`unknown line ${line}`);
   const t = TUNING, L = t[line];
   const r = createRng(deriveSeed(seed, 'world'));
@@ -40,7 +46,7 @@ export function makeWorld(seed, line) {
     templates, allTemplates: { premium: TEMPLATES.premium, generico: TEMPLATES.generico },
     saturation: t.saturation, adDecay: t.adDecay, loyaltyDecay: t.loyaltyDecay,
     rival: { arrivalMonth: r.int(12, 18), rule: r.pick(['undercut', 'match', 'best_response']), costFactor: t.rivalCostFactor, reach: t.rivalReach },
-    wildcards: scheduleWildcards(createRng(deriveSeed(seed, 'wildcards')), line),
+    wildcards: shiftForTutorial(scheduleWildcards(createRng(deriveSeed(seed, 'wildcards')), line), tutorial),
     ipoTarget: L.ipoTarget, baseMultiple: L.baseMultiple, tariff: L.tariff, rent: L.rent,
     versionsCost: t.versionsCost, versionsUnlockMonth: t.versionsUnlockMonth,
     reposition: { cost: t.repositionCost, months: t.repositionMonths },
