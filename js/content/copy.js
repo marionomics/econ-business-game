@@ -47,27 +47,36 @@ export function fmt(key, vars = {}) {
 
 const CHART = { arancel: 'cost', renta: 'cost', salud: 'demand', recesion: 'demand', marca_blanca: 'demand', viral: 'demand', influencer: 'demand' };
 
+const navList = (nav) => (nav ? (Array.isArray(nav) ? nav : [nav]) : []).map((n) => ({ ...n, label: fmt(n.tab ? `nav.${n.tab}` : 'nav.here') }));
+
 export function describeMessage(m, run) {
   const d = m.data ?? {}, w = run.world;
+  const product = productName(run, d.uid ?? run.tutorial?.uid);
   switch (m.type) {
+    case 'tutorial': return { tone: 'tutorial', tour: !!d.tour, nav: navList(d.nav),
+      text: fmt(d.id, { ...d, firm: run.meta.firmName ?? fmt('ui.title'), cfo: CFO_NAME, target: w.ipoTarget, product }) };
+    case 'coach': return { tone: 'coach', nav: navList(d.nav), text: fmt(`coach.${d.id}`) };
     case 'wildcard': {
       const vars = { tariff: w.tariff, rent: w.rent, segment: segmentName(run.state.line), product: productName(run, d.params?.uid) };
       return { tone: 'event', text: fmt(`ev.wildcard.${d.id}`, vars), chart: { kind: CHART[d.id] ?? 'demand' } };
     }
     case 'rivalArrives': return { tone: 'event', text: fmt('ev.rivalArrives'), chart: { kind: 'demand' } };
-    case 'investigation': return { tone: 'warning', text: fmt('ev.investigation', { markupPct: pct(d.markup ?? 0) }), chart: { kind: 'demand' } };
+    case 'investigation': return { tone: 'warning', nav: navList(d.nav), chart: { kind: 'demand' },
+      text: fmt('ev.investigation', { markupPct: pct(d.markup ?? 0), thresholdPct: pct(d.threshold ?? w.regulator.markupThreshold), monthsLeft: d.monthsLeft ?? w.regulator.deadlineMonths }) };
     case 'investigationClosed': return { tone: 'event', text: fmt('ev.investigationClosed') };
-    case 'fine': return { tone: 'warning', text: fmt('ev.fine', { amount: d.amount, strikes: d.strikes }) };
+    case 'fine': return { tone: 'warning', nav: navList(d.nav), text: fmt('ev.fine', { amount: d.amount, strikes: d.strikes }) };
     case 'breakup': return { tone: 'ending', text: fmt('ev.breakup') };
-    case 'crisisResolved': return { tone: d.survived ? 'event' : 'warning', text: fmt(d.survived ? 'ev.crisisResolved.ok' : 'ev.crisisResolved.bad', { crisis: fmt(`crisis.${d.id}`) }) };
+    case 'crisisResolved': return { tone: d.survived ? 'event' : 'warning', nav: navList(d.nav), text: fmt(d.survived ? 'ev.crisisResolved.ok' : 'ev.crisisResolved.bad', { crisis: fmt(`crisis.${d.id}`) }) };
     case 'ipo': return { tone: 'ending', text: fmt('ev.ipo'), chart: { kind: 'valuation' } };
     case 'bankrupt': return { tone: 'ending', text: fmt('ev.bankrupt') + ' ' + endingText(classifyEnding(run.state)).text, chart: { kind: 'cash' } };
     case 'end36': return { tone: 'ending', text: fmt('ev.end36') };
     case 'repositioned': return { tone: 'event', text: fmt('ev.repositioned', { line: lineName(d.line) }) };
-    case 'runway': return { tone: 'warning', text: fmt('ev.runway', { months: d.months }), chart: { kind: 'cash' } };
-    case 'belowCost': return { tone: 'warning', text: fmt('ev.belowCost'), chart: { kind: 'cost' } };
+    case 'runway': return { tone: 'warning', nav: navList(d.nav), chart: { kind: 'cash' },
+      text: fmt('ev.runway', { months: d.months }) + (d.culprit ? ' ' + fmt(`warn.runway.${d.culprit}`, { product }) : '') };
+    case 'belowCost': return { tone: 'warning', nav: navList(d.nav), text: fmt('ev.belowCost', { product }), chart: { kind: 'cost' } };
     case 'quip': return { tone: 'quip', text: quips()[d.n % quips().length] };
-    case 'rejected': return { tone: 'warning', text: fmt(d.reason, { m: w.versionsUnlockMonth }) };
+    case 'rejected': return { tone: 'warning', text: fmt(d.reason, { m: w.versionsUnlockMonth })
+      + (d.needed ? ' ' + fmt('act.noCash.detail', d) + (d.monthsOfProfit ? ' ' + fmt('act.noCash.months', { n: d.monthsOfProfit }) : '') : '') };
     case 'welcome': return { tone: 'event', text: fmt('ev.welcome', { cfo: CFO_NAME, cash: w.startCash, target: w.ipoTarget }) };
     case 'question': return { tone: 'question', text: fmt('ev.question'), question: d.index };
     case 'feedback': { const q = run.questions[d.index]; return { tone: 'feedback', text: describeFeedback(q, run).title, feedback: d.index }; }

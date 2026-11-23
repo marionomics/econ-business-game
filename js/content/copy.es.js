@@ -67,6 +67,44 @@ export const T = {
   'act.unknown': 'No entendí esa orden.',
   'act.adTooHigh': 'Esa publicidad mensual es mayor que toda nuestra caja. Si de verdad quieres quebrar el mes que entra, hay formas más elegantes.',
 
+
+  // ---------- Tutorial de la primera partida ----------
+  'tut.tour.cash': 'Bienvenido a {firm}. Soy {cfo}, tu director de finanzas. Arriba está la [[flujo_caja|caja]]: si llega a cero, quebramos.',
+  'tut.tour.valuation': 'Junto a la caja está la [[valuacion|valuación]] y la barra hacia la meta de la [[ipo|IPO]]: {$target} sostenidos tres meses. Esa es la meta del juego.',
+  'tut.tour.clock': 'Este es el reloj. El tiempo NO avanza solo: presiona Continuar para que pasen los meses, Pausa para detenerlo y 2× para ir más rápido.',
+  'tut.tour.tabs': 'Estas pestañas son tu tablero: Finanzas, Mercado, Costos, Productos y Valuación. Ahí se ve todo lo que pasa en la empresa.',
+  'tut.tour.chat': 'Y aquí hablo yo. Te aviso cuando algo cambia y a veces te hago preguntas que cuentan para tu calificación.',
+  'tut.tour.info': 'Cada ⓘ explica un concepto con su fórmula y un enlace al libro. Úsalos sin pena. Yo no juzgo. Mucho.',
+  'tut.launch': 'Ahora sí: ve a Productos y lanza UNA galleta. Una sola: cuesta dinero y tarda meses en estar lista.',
+  'tut.develop': '{product} estará en desarrollo {months} meses; mientras tanto pagamos costos fijos sin vender, así que perder dinero ahora es normal. Para que el tiempo avance, presiona Continuar (arriba). Puedes pausar cuando quieras.',
+  'tut.diagnose': 'Primer mes con ventas. Perdimos {$devLoss} mientras desarrollábamos y este mes el resultado fue {$profit}; con el precio correcto serían {$optProfit}. Mira la [[demanda]] y el [[costo_marginal|costo marginal]] en la gráfica y contéstame:',
+  'tut.fix': 'El precio óptimo es {$optimal}. Ve a Productos, ponlo como precio y luego presiona Continuar para ver el mes.',
+  'tut.fixAlready': 'Tu precio ya está prácticamente en el óptimo ({$optimal}). Presiona Continuar y veamos el mes.',
+  'tut.win': 'Primer triunfo: la utilidad pasó de {$before} a {$after}. Eso es el [[ingreso_marginal|ingreso marginal]] igual al costo marginal haciendo su trabajo. Desde aquí manejas tú; yo aviso cuando algo importe.',
+  'tut.noWin': 'La utilidad no subió ({$before} → {$after}). Revisa que el precio esté en {$optimal} y que la demanda no haya cambiado. Desde aquí manejas tú.',
+  'ui.tutorial.next': 'Siguiente', 'ui.tutorial.skipFix': 'Continuar sin corregir', 'ui.tutorial.replay': 'Repetir el tutorial en la próxima partida', 'ui.coach.ok': 'Entendido',
+  'act.tutorialOneProduct': 'Una a la vez. Cada lanzamiento cuesta caja y tarda meses en vender: con dos en desarrollo podemos quebrar antes de vender una caja. Terminemos el tutorial primero.',
+  'act.noCash.detail': 'Cuesta {$needed} y tenemos {$have}.', 'act.noCash.months': 'Al ritmo actual juntamos lo que falta en unos {n} meses.',
+
+  // ---------- Mini-tutoriales (una vez por alumno) ----------
+  'coach.saturation': 'Segundo producto. Ojo con la [[saturacion|saturación]]: cada galleta del mismo segmento le quita clientes a las anteriores. Mira en Mercado cómo bajó la demanda de cada una.',
+  'coach.advertising': 'La [[publicidad]] mueve la curva de demanda hacia arriba, con rendimientos decrecientes, y su efecto dura unos meses. Gasta poco, mira el resultado y ajusta.',
+  'coach.valuation': 'Ya tenemos tres meses de historia, así que hay valuación sostenida. En la pestaña Valuación ves la fórmula y cuánto falta para la [[ipo|IPO]].',
+  'coach.rival': 'Con un rival, parte de los clientes compara precios. Tus [[lealtad|clientes leales]] te protegen; una guerra de precios casi siempre deja a ambos peor. Mira tu participación en Mercado.',
+  'coach.editions': 'Ya puedes crear ediciones: una premium cara y una básica barata del mismo producto. Es [[discriminacion_precios|discriminación de precios]]: cobras más a quien más lo valora sin perder al resto.',
+  'coach.costShock': 'Un choque de costos. Pregúntate si subió el [[costo_marginal|costo marginal]] (eso mueve el precio óptimo) o el [[costo_fijo|costo fijo]] (eso no). La pestaña Costos te lo muestra.',
+  'coach.demandShock': 'Cayó la demanda. Con menos clientes, el precio óptimo también baja: recalcula (a + c)/2 con la demanda nueva en Mercado.',
+  'coach.regulator': 'El regulador mira tu [[markup]] y el triángulo gris: la [[perdida_irrecuperable|pérdida irrecuperable]]. Si bajas el margen a tiempo, la investigación se cierra.',
+  'coach.expand': 'Ampliar la planta ya conviene: bajaría tu costo por caja más de lo que sube el costo fijo. Son [[economias_escala|economías de escala]].',
+
+  // ---------- Diagnóstico de los avisos de caja ----------
+  'warn.runway.belowCost': 'El problema principal: {product} se vende por debajo de su costo marginal. Súbele el precio.',
+  'warn.runway.adsOverMargin': 'La publicidad de {product} cuesta más de lo que deja su margen. Bájala.',
+  'warn.runway.losingProduct': '{product} no alcanza a pagar su propio gasto. Revisa su precio frente a la demanda o descontinúalo.',
+  'warn.runway.investing': 'Hay productos en desarrollo que todavía no venden. Aguanta o pausa los lanzamientos.',
+  'warn.runway.fixedCosts': 'Los costos fijos son mayores que lo que dejan las ventas. Revisa Finanzas: falta margen o faltan productos que paguen la planta.',
+  'nav.finanzas': 'Ir a Finanzas', 'nav.mercado': 'Ir a Mercado', 'nav.costos': 'Ir a Costos', 'nav.productos': 'Ir a Productos', 'nav.valuacion': 'Ir a Valuación', 'nav.here': 'Mostrarme dónde',
+
   // ---------- Eventos ----------
   'ev.wildcard.arancel': 'Noticia: el gobierno impuso un [[arancel]] a los insumos importados. Cada caja nos cuesta {$tariff} más. Tu [[costo_marginal|costo marginal]] subió. Mira la gráfica: la línea de costo se movió hacia arriba. Algo me dice que el precio óptimo también. Calcula cuánto.',
   'ev.wildcard.renta': 'El dueño de la planta subió la renta {$rent} al mes. Es un [[costo_fijo|costo fijo]]: lo pagamos vendamos o no. Sugerencia que seguramente ignorarás: no toques los precios por esto.',
@@ -76,7 +114,7 @@ export const T = {
   'ev.wildcard.viral': 'Un video de {product} se hizo viral. La demanda sube 30% por 3 meses. Disfrútalo. No dura.',
   'ev.wildcard.influencer': 'Una influencer de repostería recomendó las galletas premium. Demanda +20% por 4 meses. No le pagamos nada. Eso me agrada.',
   'ev.rivalArrives': 'Llegó la competencia. Una fábrica rival va a competir por la mitad de nuestros clientes con precios similares. Los [[lealtad|clientes leales]] se quedan; los demás comparan. Nuestra demanda acaba de volverse más [[elasticidad|elástica]].',
-  'ev.investigation': 'La autoridad de [[competencia]] abrió una investigación: dominamos el mercado con un [[markup]] de {markupPct}. Tienes 3 meses para bajar el margen o habrá multa. Mira la gráfica: ese triángulo gris es la [[perdida_irrecuperable|pérdida irrecuperable]] que les preocupa.',
+  'ev.investigation': 'La autoridad de [[competencia]] abrió una investigación: dominamos el mercado con un [[markup]] de {markupPct} y el límite es {thresholdPct}. Tienes {monthsLeft} meses para bajar el margen o habrá multa. Mira la gráfica: ese triángulo gris es la [[perdida_irrecuperable|pérdida irrecuperable]] que les preocupa.',
   'ev.investigationClosed': 'La autoridad cerró la investigación. Bajaste el margen a tiempo. Anotado como "comportamiento sensato", una categoría nueva en tu expediente.',
   'ev.fine': 'Multa de la autoridad de competencia: {$amount}. Strike {strikes} de 2. Al segundo, nos parten la empresa.',
   'ev.breakup': 'Segundo strike. El regulador ordenó dividir la empresa. Fin de la partida.',
@@ -87,7 +125,7 @@ export const T = {
   'ev.end36': 'Pasaron 36 meses. Se acabó el tiempo.',
   'ev.repositioned': 'Terminó el reposicionamiento. Ahora somos una marca {line}. La mitad de nuestros clientes leales no se enteró de que seguíamos existiendo.',
   'ev.runway': 'Aviso: al ritmo actual, la caja alcanza para unos {months} meses. Esto no es una amenaza. Es aritmética.',
-  'ev.belowCost': 'Estamos vendiendo por debajo del [[costo_marginal|costo marginal]]. Cada caja vendida nos hace perder dinero. Vender más empeora las cosas, no las mejora.',
+  'ev.belowCost': 'Estamos vendiendo {product} por debajo del [[costo_marginal|costo marginal]]. Cada caja vendida nos hace perder dinero. Vender más empeora las cosas, no las mejora.',
   'ev.question': 'Pregunta del CFO.',
   'ev.welcome': 'Hola. Soy {cfo}, tu director de finanzas artificial. Tenemos {$cash} y ningún producto, que es la forma más elegante de no ganar nada.\n\nPrimero: ve a Productos y lanza una galleta. Luego presiona Continuar y el tiempo empezará a correr: un mes cada pocos segundos. Puedes cambiar precios y [[publicidad]] cuando quieras, incluso con el tiempo corriendo.\n\nLa meta es una [[ipo|IPO]]: una [[valuacion|valuación]] de {$target} sostenida tres meses. Toca cualquier ⓘ si una palabra te estorba. Yo estaré aquí. Siempre.',
   'crisis.arancel': 'arancel', 'crisis.renta': 'renta', 'crisis.salud': 'estudio de salud', 'crisis.recesion': 'recesión',
