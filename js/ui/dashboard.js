@@ -2,14 +2,14 @@
 import { esc, icon } from './dom.js';
 import { button, tabs, card, stepper, infoButton, richInline } from './components.js';
 import { lineChart, demandChart, isoprofitChart, costChart } from './charts.js';
-import { fmt, money, number, pct, slope, T, TEMPLATE_NAMES } from '../content/copy.js';
+import { fmt, money, number, pct, slope, t, templateName, templateBlurb } from '../content/copy.js';
 import { productDemand, productCost, surplus } from '../sim/market.js';
 import { valuation, sustained } from '../sim/valuation.js';
 import { launchableTemplates } from '../sim/actions.js';
 
 const TABS = ['finanzas', 'mercado', 'costos', 'productos', 'valuacion'];
 const L = (key, vars) => richInline(fmt(key, vars));
-const nameOf = (p) => TEMPLATE_NAMES[p.templateId]?.name ?? p.templateId;
+const nameOf = (p) => templateName(p.templateId);
 const active = (s) => s.products.filter((p) => p.active);
 
 export function focusProduct(run, ui) {
@@ -24,9 +24,9 @@ export function renderTopbar(run, ui, clock) {
   const sus = sustained(s.history);
   const progress = Math.max(0, Math.min(1, sus / w.ipoTarget));
   const playing = !clock.paused;
-  const reason = clock.paused ? (s.ended ? '' : fmt(`ui.paused.${clock.reason && T[`ui.paused.${clock.reason}`] ? clock.reason : 'user'}`)) : '';
+  const reason = clock.paused ? (s.ended ? '' : fmt(`ui.paused.${clock.reason && t()[`ui.paused.${clock.reason}`] ? clock.reason : 'user'}`)) : '';
   return `<header class="topbar"><div class="topbar-in">
-    <div class="brand"><span>${esc(run.meta.firmName ?? T['ui.title'])}</span><small>${esc(fmt('ui.month', { m: s.month }))} · ${esc(fmt(`ui.line.${s.line}`))}</small></div>
+    <div class="brand"><span>${esc(run.meta.firmName ?? fmt('ui.title'))}</span><small>${esc(fmt('ui.month', { m: s.month }))} · ${esc(fmt(`ui.line.${s.line}`))}</small></div>
     <div class="clockctl">
       ${s.ended ? button({ label: 'Ver final', variant: 'outline', size: 'sm', attrs: 'data-show-ending' }) + button({ label: fmt('ui.end.new'), size: 'sm', attrs: 'data-newrun' })
         : button({ label: playing ? fmt('ui.pause') : fmt('ui.play'), variant: playing ? 'outline' : 'default', size: 'sm', ico: playing ? 'pause' : 'play', attrs: `data-clock="${playing ? 'pause' : 'play'}"` })}
@@ -126,7 +126,7 @@ function productos(run, ui) {
       <div style="margin-top:10px">${button({ label: fmt('ui.prod.discontinue'), variant: 'destructive', size: 'sm', attrs: `data-act="discontinue" data-uid="${esc(p.uid)}"` })}</div></div>`;
   }).join('') || `<p class="muted">Aún no tienes productos. Lanza el primero abajo.</p>`;
   const launch = launchableTemplates(s, w).map((t) => `<button class="btn btn-outline" data-act="launch" data-template="${esc(t.id)}"${s.repositioning ? ' disabled' : ''}>
-    <span>${esc(TEMPLATE_NAMES[t.id].name)}</span><small>${esc(TEMPLATE_NAMES[t.id].blurb)}</small><small>${esc(fmt('ui.prod.cost', { cost: t.launchCost, n: t.devMonths }))}</small></button>`).join('');
+    <span>${esc(templateName(t.id))}</span><small>${esc(templateBlurb(t.id))}</small><small>${esc(fmt('ui.prod.cost', { cost: t.launchCost, n: t.devMonths }))}</small></button>`).join('');
   const plant = `${button({ label: fmt('ui.prod.expand', { cost: w.plant.expandCost, dF: w.plant.expandDF, dc: w.plant.expandDc }), variant: 'outline', size: 'sm', attrs: `data-act="expand"${s.expansions >= w.plant.maxExpansions ? ' disabled' : ''}` })} ${infoButton('economias_escala')}
     <div style="margin-top:8px">${button({ label: fmt('ui.prod.reposition', { cost: w.reposition.cost, n: w.reposition.months }).replace(/\[\[(\w+)\|([^\]]*)\]\]/g, '$2'), variant: 'ghost', size: 'sm', attrs: `data-act="reposition"${s.repositioning ? ' disabled' : ''}` })} ${infoButton('reposicionamiento')}</div>`;
   return card({ title: 'Tus productos', body: list }) + card({ title: `${esc(fmt('ui.prod.launch'))} ${infoButton('saturacion')}`, body: `<div class="launch">${launch}</div>` })

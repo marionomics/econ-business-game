@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fmt, money, T, describeMessage, describeQuestion, describeFeedback, ENDING_TEXT, TEMPLATE_NAMES, CFO_NAME, GRADING_INTRO } from '../js/content/copy.js';
+import { fmt, money, T, describeMessage, describeQuestion, describeFeedback, endingText, templateName, CFO_NAME, gradingIntro } from '../js/content/copy.js';
 import { ENDINGS, classifyEnding } from '../js/sim/endings.js';
 import { TEMPLATES } from '../js/sim/world.js';
 import { playRun, BOTS, BANKRUPT_BOTS } from './support/bots.js';
@@ -26,8 +26,8 @@ test('every message, question and feedback of many runs renders completely', () 
   for (const t of ['welcome', 'wildcard', 'rivalArrives', 'question', 'feedback', 'crisisResolved']) assert.ok(types.has(t), t);
 });
 test('every ending, template and the grading intro have copy', () => {
-  for (const e of ENDINGS) { assert.ok(ENDING_TEXT[e.id]?.title, e.id); assert.ok(ENDING_TEXT[e.id]?.text, e.id); }
-  for (const t of [...TEMPLATES.premium, ...TEMPLATES.generico]) assert.ok(TEMPLATE_NAMES[t.id]?.name, t.id);
-  assert.ok(CFO_NAME && !/glados/i.test(CFO_NAME)); assert.ok(GRADING_INTRO.includes('50'));
+  for (const e of ENDINGS) { assert.ok(endingText(e.id)?.title, e.id); assert.ok(endingText(e.id)?.text, e.id); }
+  for (const t of [...TEMPLATES.premium, ...TEMPLATES.generico]) assert.ok(templateName(t.id) !== t.id, t.id);
+  assert.ok(CFO_NAME && !/glados/i.test(CFO_NAME)); assert.ok(gradingIntro().includes('50'));
 });
 test('no copy mentions GLaDOS or Aperture', () => { for (const v of Object.values(T)) assert.doesNotMatch(v, /glados|aperture|portal/i); });

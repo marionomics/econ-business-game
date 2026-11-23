@@ -1,6 +1,23 @@
-// TODO EL TEXTO DEL JUEGO VIVE AQUÍ (más el glosario en glossary.js). Edítalo libremente.
-// {x} inserta un número, {$x} un monto en pesos, [[termino]] crea un ⓘ con la entrada del glosario.
+// Locale-aware access to the game's text. The text itself lives in copy.es.js / copy.en.js.
 import { classifyEnding } from '../sim/endings.js';
+import { getLocale } from './locale.js';
+import * as es from './copy.es.js';
+
+const PACKS = { es };
+export const registerLocalePack = (locale, pack) => { PACKS[locale] = pack; };
+const pack = () => PACKS[getLocale()] ?? es;
+const pick = (name, key) => pack()[name]?.[key] ?? es[name][key];
+
+export const T = es.T; // the Spanish dictionary (source of truth for keys)
+export const t = () => pack().T;
+export const cfoLong = () => pack().CFO_LONG ?? es.CFO_LONG;
+export const templateName = (id) => pick('TEMPLATE_NAMES', id)?.name ?? id;
+export const templateBlurb = (id) => pick('TEMPLATE_NAMES', id)?.blurb ?? '';
+export const endingText = (id) => pick('ENDING_TEXT', id);
+export const gradingIntro = () => pack().GRADING_INTRO ?? es.GRADING_INTRO;
+const quips = () => pack().QUIPS ?? es.QUIPS;
+const segmentName = (line) => pick('SEGMENT', line);
+const lineName = (line) => pick('LINE', line);
 
 const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 export const number = (n) => (n < 0 ? '−' : '') + nf.format(Math.abs(n));
@@ -9,196 +26,16 @@ export const pct = (x) => `${Math.round(x * 100)}%`;
 export const slope = (b) => String(Number(Number(b).toPrecision(3))); // demand slopes are small: keep significant digits
 
 export const CFO_NAME = 'M.A.R.G.E.N.';
-export const CFO_LONG = 'Módulo Automatizado de Rentabilidad, Gestión y Evaluación Numérica';
 
-export const TEMPLATE_NAMES = {
-  premium_mantequilla: { name: 'Mantequilla Reserva', blurb: 'Galleta de mantequilla con receta de la abuela que nadie verificó.' },
-  premium_chocolate: { name: 'Chocolate Belga 70%', blurb: 'Para gente que dice "notas de frutos rojos" con cara seria.' },
-  premium_avena: { name: 'Avena y Miel Artesanal', blurb: 'Saludable según el empaque. Según la nutrióloga, también… casi.' },
-  generico_clasica: { name: 'Clásica de Vainilla', blurb: 'La de siempre. En paquete grande. Sin pretensiones.' },
-  generico_chispas: { name: 'Chispas de Chocolate', blurb: 'Contiene chispas. Algunas. Estadísticamente.' },
-  generico_surtido: { name: 'Surtido Familiar', blurb: 'La lata que termina guardando hilos en casa de tu tía.' },
-};
-const productName = (run, uid) => { const p = run.state.products.find((x) => x.uid === uid); return p ? TEMPLATE_NAMES[p.templateId].name : 'tu producto'; };
+const productName = (run, uid) => { const p = run.state.products.find((x) => x.uid === uid); return p ? templateName(p.templateId) : fmt('ui.yourProduct'); };
 
-export const T = {
-  // ---------- Interfaz ----------
-  'ui.title': 'Rumbo a la IPO',
-  'ui.subtitle': 'Una fábrica de galletas, un CFO artificial y la Unidad 7 de CORE',
-  'ui.welcome.name': 'Tu nombre', 'ui.welcome.id': 'Matrícula', 'ui.welcome.code': 'Código de la clase', 'ui.welcome.firm': 'Nombre de tu empresa',
-  'ui.welcome.start': 'Continuar', 'ui.welcome.missing': 'Llena todos los campos.', 'ui.welcome.badCode': 'Ese código de clase no existe. Pídeselo a tu profesor.',
-  'ui.line.title': 'Elige tu estrategia', 'ui.line.premium': 'Marca premium', 'ui.line.generico': 'Genérico de volumen',
-  'ui.line.premium.body': 'Pocos clientes que pagan mucho. Costos altos, demanda poco [[elasticidad|elástica]], la [[publicidad]] construye [[lealtad]]. Los inversionistas pagan un [[multiplo|múltiplo]] alto.',
-  'ui.line.generico.body': 'Muchos clientes que comparan precios. Costos bajos, márgenes delgados, demanda muy elástica. Ganas con volumen y [[economias_escala|escala]].',
-  'ui.line.choose': 'Fundar con esta estrategia',
-  'ui.resume': 'Tienes una empresa en marcha. El juego está en pausa: continúa cuando quieras.',
-  'ui.month': 'Mes {m} de 36', 'ui.cash': 'Caja', 'ui.valuation': 'Valuación', 'ui.target': 'Meta IPO {$target}',
-  'ui.play': 'Continuar', 'ui.pause': 'Pausa', 'ui.speed1': '1×', 'ui.speed2': '2×',
-  'ui.paused.hidden': 'Pausado porque cambiaste de pestaña.', 'ui.paused.event': 'Pausado: tu CFO tiene algo que decirte.',
-  'ui.paused.question': 'Pausado: responde la pregunta de tu CFO.', 'ui.paused.resume': 'Tienes una empresa en marcha. El juego está en pausa: continúa cuando quieras.', 'ui.paused.user': 'En pausa.',
-  'ui.tab.finanzas': 'Finanzas', 'ui.tab.mercado': 'Mercado', 'ui.tab.costos': 'Costos', 'ui.tab.productos': 'Productos', 'ui.tab.valuacion': 'Valuación',
-  'ui.chat': 'Tu CFO', 'ui.chat.open': 'Abrir chat', 'ui.chat.close': 'Cerrar chat', 'ui.skip': 'Tocar para terminar de leer',
-  'ui.manual': 'Manual del CFO', 'ui.gallery': 'Finales', 'ui.close': 'Cerrar',
-  'ui.answer': 'Responder', 'ui.yourAnswer': 'Tu respuesta', 'ui.inputError': 'No entendí ese número. Escríbelo así: 1250 o 1,250.5',
-  'ui.fin.revenue': 'Ingresos', 'ui.fin.cogs': 'Costo de ventas', 'ui.fin.contribution': '[[margen_contribucion|Margen de contribución]]',
-  'ui.fin.fixed': '[[costo_fijo|Costos fijos]]', 'ui.fin.ads': '[[publicidad|Publicidad]]', 'ui.fin.other': 'Otros (multas)', 'ui.fin.profit': 'Utilidad del mes',
-  'ui.fin.statement': '[[estado_resultados|Estado de resultados]] del mes {m}', 'ui.fin.cashflow': '[[flujo_caja|Caja]] mes a mes',
-  'ui.fin.balance': '[[balance|Balance]]: caja {$cash} · planta ampliada {n} veces · {p} productos activos',
-  'ui.mkt.title': '[[demanda|Demanda]] y [[excedente_consumidor|excedentes]] de {product}', 'ui.mkt.price': 'Precio', 'ui.mkt.qty': 'Cajas',
-  'ui.mkt.share': 'Tu participación', 'ui.mkt.rival': 'Precio del rival', 'ui.mkt.norival': 'Sin rival (por ahora)',
-  'ui.mkt.elasticity': '[[elasticidad|Elasticidad]] en tu precio', 'ui.mkt.cs': 'Excedente del consumidor', 'ui.mkt.ps': '[[excedente_productor|Excedente del productor]]',
-  'ui.mkt.dwl': '[[perdida_irrecuperable|Pérdida irrecuperable]]',
-  'ui.cost.title': 'Costos de {product}', 'ui.cost.mc': '[[costo_marginal|Costo marginal]]', 'ui.cost.ac': '[[costo_medio|Costo medio]]',
-  'ui.cost.iso': 'Curvas de [[isobeneficio]]', 'ui.cost.F': 'Costo fijo mensual',
-  'ui.prod.launch': 'Lanzar producto', 'ui.prod.cost': 'Cuesta {$cost} · listo en {n} meses', 'ui.prod.price': 'Precio', 'ui.prod.ad': 'Publicidad mensual',
-  'ui.prod.discontinue': 'Descontinuar', 'ui.prod.versions': 'Crear ediciones ([[discriminacion_precios|discriminación de precios]])',
-  'ui.prod.versionsLocked': 'Disponible desde el mes {m}', 'ui.prod.high': 'Edición premium', 'ui.prod.low': 'Edición básica',
-  'ui.prod.expand': 'Ampliar planta ({$cost}: costo fijo +{$dF}, costo por caja −{$dc})', 'ui.prod.reposition': '[[reposicionamiento|Reposicionar]] la marca ({$cost}, {n} meses)',
-  'ui.prod.dev': 'En desarrollo hasta el mes {m}', 'ui.prod.loyal': '[[lealtad|Leales]]: {pct}',
-  'ui.val.title': '[[valuacion|Valuación]] = [[utilidad_anualizada|utilidad anualizada]] × [[multiplo|múltiplo]] + caja',
-  'ui.val.line': '{$annual} × {mult} + {$cash} = {$value}', 'ui.val.parts': 'Múltiplo base {base} · crecimiento {growth} · margen {margin} · regulador −{reg}',
-  'ui.val.sustained': 'Valuación sostenida (mínimo de 3 meses): {$v} — la [[ipo|IPO]] llega cuando supera {$target}',
-  'ui.end.score': 'Tu calificación en este intento', 'ui.end.val': 'Valuación', 'ui.end.crises': '[[crisis|Crisis]] superadas',
-  'ui.end.questions': 'Preguntas del CFO', 'ui.end.total': 'Total', 'ui.end.best': 'Cuenta tu mejor intento. Puedes jugar las veces que quieras.',
-  'ui.end.new': 'Fundar otra empresa', 'ui.sent': 'Resultado enviado al profesor.', 'ui.sending': 'Enviando resultado…',
-  'ui.queued': 'Guardado en este dispositivo; se enviará la próxima vez que abras el juego con internet.',
-  'ui.gallery.intro': 'Has descubierto {n} de {total} finales. Cada estrategia distinta acaba distinto.', 'ui.locked': '???',
 
-  // ---------- Acciones rechazadas ----------
-  'act.noCash': 'No alcanza la caja. Te recuerdo que el dinero que no tienes no se puede gastar. Es una limitación de la realidad, no mía.',
-  'act.locked': 'Las ediciones se desbloquean en el mes {m}. La paciencia también es una estrategia. Una que no has probado.',
-  'act.maxExpansions': 'La planta ya no se puede ampliar más. Créeme, lo intenté.',
-  'act.badNumber': 'Eso no es un número. Probemos de nuevo, con números.',
-  'act.badVersions': 'La edición premium debe costar más que la básica. Por definición. Por eso se llama premium.',
-  'act.noProduct': 'Ese producto ya no existe. Descansa en paz.',
-  'act.repositioning': 'Estamos a la mitad de un reposicionamiento. Un cambio de identidad a la vez, por favor.',
-  'act.noTemplate': 'Esa receta no corresponde a nuestra estrategia actual.',
-  'act.ended': 'La partida terminó. Ya no hay nada que decidir. Qué alivio, ¿no?',
-  'act.unknown': 'No entendí esa orden.',
-  'act.adTooHigh': 'Esa publicidad mensual es mayor que toda nuestra caja. Si de verdad quieres quebrar el mes que entra, hay formas más elegantes.',
 
-  // ---------- Eventos ----------
-  'ev.wildcard.arancel': 'Noticia: el gobierno impuso un [[arancel]] a los insumos importados. Cada caja nos cuesta {$tariff} más. Tu [[costo_marginal|costo marginal]] subió. Mira la gráfica: la línea de costo se movió hacia arriba. Algo me dice que el precio óptimo también. Calcula cuánto.',
-  'ev.wildcard.renta': 'El dueño de la planta subió la renta {$rent} al mes. Es un [[costo_fijo|costo fijo]]: lo pagamos vendamos o no. Sugerencia que seguramente ignorarás: no toques los precios por esto.',
-  'ev.wildcard.salud': 'Salió un estudio de salud sobre galletas {segment}. Nuestra [[demanda]] cayó un 20% durante 6 meses. La gente aún nos quiere. Un poco menos. Ajusta.',
-  'ev.wildcard.recesion': 'Recesión. Todo el mundo compra 15% menos durante 6 meses. No es personal. Bueno, un poco.',
-  'ev.wildcard.marca_blanca': 'El supermercado lanzó su propia [[marca_blanca|marca blanca]], idéntica a nuestras galletas y más barata. Nuestra demanda cayó 20% de forma permanente. Me encantaría decir que lo vi venir. Lo vi venir.',
-  'ev.wildcard.viral': 'Un video de {product} se hizo viral. La demanda sube 30% por 3 meses. Disfrútalo. No dura.',
-  'ev.wildcard.influencer': 'Una influencer de repostería recomendó las galletas premium. Demanda +20% por 4 meses. No le pagamos nada. Eso me agrada.',
-  'ev.rivalArrives': 'Llegó la competencia. Una fábrica rival va a competir por la mitad de nuestros clientes con precios similares. Los [[lealtad|clientes leales]] se quedan; los demás comparan. Nuestra demanda acaba de volverse más [[elasticidad|elástica]].',
-  'ev.investigation': 'La autoridad de [[competencia]] abrió una investigación: dominamos el mercado con un [[markup]] de {markupPct}. Tienes 3 meses para bajar el margen o habrá multa. Mira la gráfica: ese triángulo gris es la [[perdida_irrecuperable|pérdida irrecuperable]] que les preocupa.',
-  'ev.investigationClosed': 'La autoridad cerró la investigación. Bajaste el margen a tiempo. Anotado como "comportamiento sensato", una categoría nueva en tu expediente.',
-  'ev.fine': 'Multa de la autoridad de competencia: {$amount}. Strike {strikes} de 2. Al segundo, nos parten la empresa.',
-  'ev.breakup': 'Segundo strike. El regulador ordenó dividir la empresa. Fin de la partida.',
-  'ev.crisisResolved.ok': 'Crisis "{crisis}" superada: seis meses después seguimos en pie y ganando dinero. Lo registro con sorpresa moderada.',
-  'ev.crisisResolved.bad': 'Crisis "{crisis}" no superada: seis meses después seguimos perdiendo dinero. Revisa precios y costos.',
-  'ev.ipo': 'Lo lograste: la valuación se sostuvo por encima de la meta tres meses seguidos. Salimos a bolsa. Me declaro… satisfecho.',
-  'ev.bankrupt': 'La caja quedó en negativo. Quebramos.',
-  'ev.end36': 'Pasaron 36 meses. Se acabó el tiempo.',
-  'ev.repositioned': 'Terminó el reposicionamiento. Ahora somos una marca {line}. La mitad de nuestros clientes leales no se enteró de que seguíamos existiendo.',
-  'ev.runway': 'Aviso: al ritmo actual, la caja alcanza para unos {months} meses. Esto no es una amenaza. Es aritmética.',
-  'ev.belowCost': 'Estamos vendiendo por debajo del [[costo_marginal|costo marginal]]. Cada caja vendida nos hace perder dinero. Vender más empeora las cosas, no las mejora.',
-  'ev.question': 'Pregunta del CFO.',
-  'ev.welcome': 'Hola. Soy {cfo}, tu director de finanzas artificial. Tenemos {$cash} y ningún producto, que es la forma más elegante de no ganar nada.\n\nPrimero: ve a Productos y lanza una galleta. Luego presiona Continuar y el tiempo empezará a correr: un mes cada pocos segundos. Puedes cambiar precios y [[publicidad]] cuando quieras, incluso con el tiempo corriendo.\n\nLa meta es una [[ipo|IPO]]: una [[valuacion|valuación]] de {$target} sostenida tres meses. Toca cualquier ⓘ si una palabra te estorba. Yo estaré aquí. Siempre.',
-  'crisis.arancel': 'arancel', 'crisis.renta': 'renta', 'crisis.salud': 'estudio de salud', 'crisis.recesion': 'recesión',
-  'crisis.marca_blanca': 'marca blanca', 'crisis.rival': 'llegada del rival', 'crisis.regulador': 'investigación del regulador',
 
-  // ---------- Preguntas ----------
-  'q.precio_optimo.prompt': 'Lanzamos {product}. Su demanda es P = a − bQ con a = {$a}, y cada caja cuesta c = {$c}. ¿Qué precio maximiza la utilidad?',
-  'q.precio_optimo.explain': 'Con demanda lineal, el óptimo está donde IMg = CMg, y eso da P* = (a + c)/2 = ({$a} + {$c})/2 = {$answer}.',
-  'q.utilidad_mes.prompt': 'Si vendemos {product} a {$P} y salen {Q} cajas a {$c} cada una, ¿cuál es su margen de contribución mensual?',
-  'q.utilidad_mes.explain': 'Margen de contribución = (P − c) × Q = ({$P} − {$c}) × {Q} = {$answer}. De ahí salen los costos fijos.',
-  'q.arancel_precio.prompt': 'Antes del arancel, {product} costaba {$cOld} por caja; el arancel suma {$tariff}. La demanda tiene a = {$a}. ¿Cuál es el nuevo precio óptimo?',
-  'q.arancel_precio.explain': 'P* = (a + c)/2 con el costo nuevo: ({$a} + {$cOld} + {$tariff})/2 = {$answer}. El precio sube la mitad del arancel; la otra mitad la absorbemos.',
-  'q.arancel_mc.prompt': 'El arancel subió nuestro costo marginal {$tariff} por caja. Con demanda lineal, ¿qué le pasa al precio óptimo?',
-  'q.arancel_mc.opt.sube': 'Sube lo mismo que el costo', 'q.arancel_mc.opt.sube_mitad': 'Sube la mitad del aumento', 'q.arancel_mc.opt.igual': 'No cambia', 'q.arancel_mc.opt.baja': 'Baja',
-  'q.arancel_mc.explain': 'P* = (a + c)/2: si c sube {$tariff}, P* sube la mitad. Subir todo el costo espantaría demasiados clientes.',
-  'q.renta_precio.prompt': 'La renta subió {$rent} al mes. ¿Qué le pasa al precio que maximiza la utilidad?',
-  'q.renta_precio.opt.sube': 'Sube lo mismo que la renta', 'q.renta_precio.opt.sube_mitad': 'Sube la mitad', 'q.renta_precio.opt.igual': 'No cambia', 'q.renta_precio.opt.baja': 'Baja',
-  'q.renta_precio.explain': 'La renta es un costo fijo: no cambia el ingreso marginal ni el costo marginal, así que el precio óptimo es el mismo. Subir precios "para cubrir la renta" haría perder más.',
-  'q.renta_utilidad.prompt': 'El mes pasado ganamos {$lastProfit}. Si todo sigue igual salvo la renta, que subió {$rent}, ¿cuánto ganaremos este mes?',
-  'q.renta_utilidad.explain': 'Un costo fijo se resta completo de la utilidad: {$lastProfit} − {$rent} = {$answer}.',
-  'q.demanda_precio.prompt': 'Por la crisis, la demanda de {product} ahora tiene a = {$a}. Cada caja cuesta {$c}. ¿Cuál es el nuevo precio óptimo?',
-  'q.demanda_precio.explain': 'P* = (a + c)/2 = ({$a} + {$c})/2 = {$answer}. Cuando la demanda cae, el precio óptimo también baja.',
-  'q.demanda_ingreso.prompt': 'Con la nueva demanda (a = {$a}) y nuestro precio actual de {$P}, ¿la demanda de {product} es elástica o inelástica en ese punto?',
-  'q.demanda_ingreso.opt.elastica': 'Elástica (ε > 1)', 'q.demanda_ingreso.opt.inelastica': 'Inelástica (ε < 1)',
-  'q.demanda_ingreso.explain': 'Con demanda lineal, ε = P/(a − P) = {$P}/({$a} − {$P}). Si es mayor que 1, bajar el precio sube el ingreso.',
-  'q.rival_lealtad.prompt': 'Llegó un rival. ¿Por qué los clientes leales protegen nuestras ventas?',
-  'q.rival_lealtad.opt.protege': 'Porque no se van aunque el rival sea más barato: nuestra demanda se vuelve menos elástica',
-  'q.rival_lealtad.opt.nada': 'No las protegen: todos los clientes se van con el más barato',
-  'q.rival_lealtad.opt.costos': 'Porque los clientes leales nos cuestan menos producir',
-  'q.rival_lealtad.opt.precio_bajo': 'Porque los leales solo compran si bajamos el precio',
-  'q.rival_lealtad.explain': 'Los leales no comparan precios. Entre más tengas, menos clientes pierdes al cobrar más que el rival: tu poder de mercado sobrevive.',
-  'q.rival_elasticidad.prompt': 'Con un rival vendiendo algo parecido, ¿qué le pasa a nuestro markup óptimo (P − c)/P?',
-  'q.rival_elasticidad.opt.sube': 'Sube', 'q.rival_elasticidad.opt.baja': 'Baja', 'q.rival_elasticidad.opt.igual': 'No cambia',
-  'q.rival_elasticidad.explain': 'Un sustituto cercano vuelve la demanda más elástica. Como markup = 1/ε, el markup óptimo baja.',
-  'q.pie_calculo.prompt': 'Vendemos {product} a {$P} y salen {Q} cajas; si cobráramos el costo marginal ({$c}) saldrían {Qc}. ¿Cuál es la pérdida irrecuperable?',
-  'q.pie_calculo.explain': 'PIE = ½ × (Qc − Q) × (P − c) = ½ × ({Qc} − {Q}) × ({$P} − {$c}) = {$answer}.',
-  'q.pie_concepto.prompt': '¿Por qué existe una pérdida irrecuperable de eficiencia en nuestro mercado?',
-  'q.pie_concepto.opt.precio_sobre_cmg': 'Porque cobramos más que el costo marginal: hay clientes que pagarían más que el costo y no compran',
-  'q.pie_concepto.opt.costo_fijo': 'Porque tenemos costos fijos altos', 'q.pie_concepto.opt.impuestos': 'Porque pagamos impuestos',
-  'q.pie_concepto.opt.publicidad': 'Porque gastamos en publicidad',
-  'q.pie_concepto.explain': 'Con un precio por encima del costo marginal, se dejan de hacer ventas que beneficiarían a ambos lados. Ese triángulo es la PIE.',
-  'q.costo_medio.prompt': 'Con un costo por caja de {$c} y costos fijos de {$F} al mes, ¿cuál es el costo medio si vendemos {Q} cajas? (Dos decimales.)',
-  'q.costo_medio.explain': 'CMe = c + F/Q = {$c} + {$F}/{Q} = {answer}.',
-  'q.escala.prompt': 'Ampliamos la planta. ¿Por qué el costo medio baja cuando vendemos más cajas?',
-  'q.escala.opt.fijo_repartido': 'Porque el costo fijo se reparte entre más cajas', 'q.escala.opt.cmg_sube': 'Porque cada caja extra cuesta más',
-  'q.escala.opt.precio_sube': 'Porque al vender más subimos el precio', 'q.escala.opt.nada': 'No baja',
-  'q.escala.explain': 'CMe = c + F/Q: con más cajas, F/Q se hace pequeño. Esas son las economías de escala.',
-  'q.discriminacion.prompt': '¿Por qué crear una edición premium y una básica puede subir la utilidad?',
-  'q.discriminacion.opt.captura_excedente': 'Porque cobramos más a quien más valora y vendemos a quien antes no compraba: capturamos parte del excedente y de la PIE',
-  'q.discriminacion.opt.baja_costos': 'Porque producir dos ediciones es más barato', 'q.discriminacion.opt.quita_rival': 'Porque elimina al rival',
-  'q.discriminacion.opt.nada': 'No sube la utilidad',
-  'q.discriminacion.explain': 'Es discriminación de precios: los que valoran más pagan la edición cara y los demás compran la básica, en lugar de no comprar.',
-  'q.elasticidad.prompt': 'Revisión rutinaria. {product} se vende a {$P} y su demanda tiene a = {$a}. ¿Cuál es la elasticidad en ese punto? (Dos decimales.)',
-  'q.elasticidad.explain': 'ε = P/(a − P) = {$P}/({$a} − {$P}) = {answer}.',
-  'q.markup.prompt': 'Revisión rutinaria. {product} se vende a {$P} y cada caja cuesta {$c}. ¿Cuál es nuestro markup (P − c)/P? (Dos decimales.)',
-  'q.markup.explain': '(P − c)/P = ({$P} − {$c})/{$P} = {answer}.',
-  'fb.correct': 'Correcto.', 'fb.incorrect': 'Incorrecto.',
-  'fb.detail': 'Tu respuesta: {yours} · Correcta: {right}',
-};
-
-const QUIPS = [
-  'Todo va bien. Lo menciono porque es estadísticamente raro.',
-  'Recordatorio amistoso: la caja no se recarga sola. Lo he verificado.',
-  'Me tomé la libertad de revisar tus decisiones. Sigo procesando algunas.',
-  'Si alguna vez dudas, el ingreso marginal y el costo marginal siguen disponibles. Gratis.',
-  'Nuestras galletas no tienen sentimientos. Tus precios, por lo visto, tampoco.',
-  'He calculado 14 escenarios donde esta empresa prospera. En 11 tú no tomas las decisiones. Es broma. Son 12.',
-  'Las curvas de isobeneficio están ahí, esperándote. Con paciencia infinita, como yo.',
-  'Dato curioso: las empresas que leen sus estados de resultados quiebran menos. Es correlación. Pero aun así.',
-  'Seguimos vivos. Lo pongo en el reporte como logro.',
-  'La elasticidad no es una opinión. Es un número. A veces incómodo.',
-  'Un cliente leal vale más que tres que comparan precios. No lo digo yo, lo dice la demanda.',
-  'Si te sientes perdido, el Manual del CFO existe. Lo escribí con mucho cariño. Y con fórmulas.',
-];
-const SEGMENT = { premium: 'artesanales', generico: 'industriales' };
-const LINE = { premium: 'premium', generico: 'genérica de volumen' };
-
-export const ENDING_TEXT = {
-  ipo_premium: { title: 'IPO: la marca premium', text: 'Saliste a bolsa como las marcas que la gente defiende: pocos clientes que pagan mucho, demanda poco elástica y un markup alto. El camino de Apple aplicado a galletas. Los inversionistas compraron la historia y la utilidad. Yo compré las galletas de mantequilla.' },
-  ipo_volumen: { title: 'IPO: pila alta, precio bajo', text: 'Saliste a bolsa con el modelo de volumen: márgenes delgados, muchísimas cajas y costos fijos repartidos entre todas. Economías de escala en estado puro. No eres glamoroso. Eres rentable. Prefiero lo segundo.' },
-  comprada: { title: 'Te compró un grupo más grande', text: 'Llegaste al mes 36 sin la valuación para una IPO, pero con utilidad. Un grupo más grande compró la empresa. Para ellos, comprarte elimina un competidor; para ti, es una salida digna. Para mí, un cambio de servidor.' },
-  fin_sin_ipo: { title: 'Fin del tiempo, sin IPO', text: 'Pasaron 36 meses y la empresa sigue perdiendo dinero. No quebraste, lo cual es algo. Revisa tus precios frente a la demanda y tus costos fijos frente a lo que vendes.' },
-  regulador: { title: 'El regulador te parte', text: 'Dominaste el mercado con márgenes altos y no corregiste a tiempo. La autoridad de competencia dividió la empresa. Tu markup generaba una pérdida irrecuperable grande: clientes que pagarían más que el costo se quedaban sin galletas. Eso es lo que la política de competencia persigue (CORE 7.12).' },
-  quiebra_bajo_costo: { title: 'Quiebra: vender por debajo del costo', text: 'Vendiste por debajo del costo marginal. Cada caja vendida restaba dinero, y entre más vendías, más perdías. "Ganar mercado" con margen negativo solo funciona si alguien más paga la cuenta. Nadie la pagó.' },
-  quiebra_publicidad: { title: 'Quiebra: la publicidad se comió la caja', text: 'Gastaste en publicidad más de lo que dejaban tus ventas. La publicidad mueve la demanda, pero con rendimientos decrecientes: los últimos pesos casi no hacen nada. Compara lo que cuesta con lo que agrega al margen de contribución.' },
-  quiebra_expansion: { title: 'Quiebra: la caja no alcanzó', text: 'Lanzamientos, ampliaciones y costos fijos fueron mayores que lo que vendías. Invertir puede bajar costos o subir la demanda, pero si la caja se acaba antes de cosechar, la empresa muere antes. Mide el tiempo de recuperación de cada inversión.' },
-  quiebra_guerra: { title: 'Quiebra: la guerra de precios', text: 'Llegó el rival y respondiste bajando precios. Él también bajó. Vendían mucho, pero el margen ya no cubría los costos fijos. Con pocos clientes leales, cada empresa tiene la tentación de bajar el precio y juntas terminan peor. Construye lealtad antes de que llegue la competencia.' },
-  quiebra_choque_costos: { title: 'Quiebra: ignoraste el arancel', text: 'El arancel subió tu costo marginal y tus precios no se movieron. El margen se encogió mes a mes hasta que la caja se acabó. Cuando sube el costo marginal, el precio óptimo sube la mitad del aumento: había que ajustarlo.' },
-  quiebra_demanda: { title: 'Quiebra: la demanda cayó y no te moviste', text: 'La demanda cayó (crisis, estudio de salud o marca blanca) y seguiste como si nada. Con menos clientes, el precio óptimo baja y algunos productos dejan de pagar sus costos fijos. Ajustar precios y recortar a tiempo habría salvado la empresa.' },
-};
-
-export const GRADING_INTRO = `Cómo se califica cada intento (de 100 puntos; cuenta tu mejor intento):
-• Valuación: hasta 50 puntos según la valuación sostenida (mínimo de 3 meses) frente a la meta de la IPO. Llegar a la IPO = 50.
-• Crisis superadas: hasta 30 puntos. Sobrevives una crisis si 6 meses después no has quebrado y tus últimos 3 meses suman utilidad.
-• Preguntas del CFO: hasta 20 puntos.
-Si quiebras pronto, las crisis y las preguntas se dividen entre al menos 3 y 6: quebrar rápido no regala puntos.
-Es a libro abierto y puedes discutirlo con tus compañeros. Cada empresa nueva tiene números distintos.`;
 
 // ---------------------------------------------------------------------------
 export function fmt(key, vars = {}) {
-  const tpl = T[key];
+  const tpl = pack().T[key] ?? es.T[key];
   if (tpl === undefined) return `⟦${key}⟧`;
   return tpl.replace(/\{(\$?)(\w+)\}/g, (_, isMoney, name) => {
     const v = vars[name];
@@ -214,7 +51,7 @@ export function describeMessage(m, run) {
   const d = m.data ?? {}, w = run.world;
   switch (m.type) {
     case 'wildcard': {
-      const vars = { tariff: w.tariff, rent: w.rent, segment: SEGMENT[run.state.line], product: productName(run, d.params?.uid) };
+      const vars = { tariff: w.tariff, rent: w.rent, segment: segmentName(run.state.line), product: productName(run, d.params?.uid) };
       return { tone: 'event', text: fmt(`ev.wildcard.${d.id}`, vars), chart: { kind: CHART[d.id] ?? 'demand' } };
     }
     case 'rivalArrives': return { tone: 'event', text: fmt('ev.rivalArrives'), chart: { kind: 'demand' } };
@@ -224,12 +61,12 @@ export function describeMessage(m, run) {
     case 'breakup': return { tone: 'ending', text: fmt('ev.breakup') };
     case 'crisisResolved': return { tone: d.survived ? 'event' : 'warning', text: fmt(d.survived ? 'ev.crisisResolved.ok' : 'ev.crisisResolved.bad', { crisis: fmt(`crisis.${d.id}`) }) };
     case 'ipo': return { tone: 'ending', text: fmt('ev.ipo'), chart: { kind: 'valuation' } };
-    case 'bankrupt': return { tone: 'ending', text: fmt('ev.bankrupt') + ' ' + ENDING_TEXT[classifyEnding(run.state)].text, chart: { kind: 'cash' } };
+    case 'bankrupt': return { tone: 'ending', text: fmt('ev.bankrupt') + ' ' + endingText(classifyEnding(run.state)).text, chart: { kind: 'cash' } };
     case 'end36': return { tone: 'ending', text: fmt('ev.end36') };
-    case 'repositioned': return { tone: 'event', text: fmt('ev.repositioned', { line: LINE[d.line] }) };
+    case 'repositioned': return { tone: 'event', text: fmt('ev.repositioned', { line: lineName(d.line) }) };
     case 'runway': return { tone: 'warning', text: fmt('ev.runway', { months: d.months }), chart: { kind: 'cash' } };
     case 'belowCost': return { tone: 'warning', text: fmt('ev.belowCost'), chart: { kind: 'cost' } };
-    case 'quip': return { tone: 'quip', text: QUIPS[d.n % QUIPS.length] };
+    case 'quip': return { tone: 'quip', text: quips()[d.n % quips().length] };
     case 'rejected': return { tone: 'warning', text: fmt(d.reason, { m: w.versionsUnlockMonth }) };
     case 'welcome': return { tone: 'event', text: fmt('ev.welcome', { cfo: CFO_NAME, cash: w.startCash, target: w.ipoTarget }) };
     case 'question': return { tone: 'question', text: fmt('ev.question'), question: d.index };
