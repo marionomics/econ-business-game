@@ -10,6 +10,9 @@ export const RESULT_COLUMNS = ['runId', 'timestamp', 'classCode', 'playerId', 'p
 export const normalizeId = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
   .trim().toLowerCase().replace(/\s+/g, ' ');
 
+// A cell starting with = + - @ (or tab/CR) would be read by Sheets as a formula.
+export const sanitizeCell = (v) => (typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? "'" + v : v);
+
 export function buildResultRow(run, gallery = []) {
   const st = run.state;
   const lastDecision = Object.keys(run.choices).pop();
@@ -26,7 +29,7 @@ export function buildResultRow(run, gallery = []) {
     openText: run.openText ?? '', galleryCount: gallery.length,
     decisionLog: JSON.stringify({ choices: run.choices, quarters: st.quarters, checkpoints: run.checkpoints, lastDecision }),
   };
-  return Object.fromEntries(RESULT_COLUMNS.map((k) => [k, row[k]]));
+  return Object.fromEntries(RESULT_COLUMNS.map((k) => [k, sanitizeCell(row[k])]));
 }
 
 async function post(url, row, fetchImpl) {

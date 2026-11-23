@@ -6,6 +6,10 @@ const HEADERS = ['runId', 'timestamp', 'classCode', 'playerId', 'playerName', 'r
   'endingId', 'stageReached', 'quarterReached', 'checkpointItems', 'checkpointCorrect', 'checkpointPts', 'outcomePts',
   'firmValue', 'benchmarkValue', 'valuePts', 'total', 'openText', 'galleryCount', 'decisionLog'];
 
+function sanitize_(v) {
+  return (typeof v === 'string' && /^[=+\-@\t\r]/.test(v)) ? "'" + v : v;
+}
+
 function sheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET);
@@ -21,7 +25,7 @@ function doPost(e) {
     const row = JSON.parse(e.postData.contents);
     const sh = sheet_();
     const dup = sh.getRange('A:A').createTextFinder(String(row.runId)).matchEntireCell(true).findNext();
-    if (!dup) sh.appendRow(HEADERS.map(function (h) { return row[h] === undefined ? '' : row[h]; }));
+    if (!dup) sh.appendRow(HEADERS.map(function (h) { return row[h] === undefined ? '' : sanitize_(row[h]); }));
     return ContentService.createTextOutput('ok');
   } finally {
     lock.releaseLock();

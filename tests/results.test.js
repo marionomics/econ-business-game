@@ -35,3 +35,13 @@ test('flushQueue re-queues failures', async () => { const s = fakeStore(); enque
 test('send uses text/plain no-cors POST', async () => { let seen;
   await sendResult('https://x', { runId: 'z' }, { fetchImpl: (u, o) => { seen = o; return Promise.resolve({}); }, store: fakeStore() });
   assert.equal(seen.method, 'POST'); assert.equal(seen.mode, 'no-cors'); assert.match(seen.headers['Content-Type'], /text\/plain/); });
+test('text cells that look like formulas are neutralized', async () => {
+  const { sanitizeCell } = await import('../js/results.js');
+  for (const s of ['=HYPERLINK("x")', '+1', '-cmd', '@SUM(A1)', '\tx']) assert.equal(sanitizeCell(s), "'" + s);
+  assert.equal(sanitizeCell('Ana'), 'Ana'); assert.equal(sanitizeCell(-3000), -3000);
+  let r = createRun({ seed: 3, playerId: 'x', playerName: '=1+1', firmName: 'F', classCode: 'C', runNumber: 1 });
+  while (currentStep(r).kind !== 'ending') { const st = currentStep(r); r = advance(r, st.kind === 'decision' ? st.options[0].id : st.kind === 'checkpoint' ? (st.built.kind === 'mc' ? st.built.options[0].id : '1') : '@evil'); }
+  const row = buildResultRow(r, []); assert.equal(row.playerName, "'=1+1");
+  if (r.openText) assert.equal(row.openText, "'@evil");
+  assert.match(readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), /function sanitize_/);
+});
