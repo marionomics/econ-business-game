@@ -15,9 +15,23 @@ function enqueue(run, id, nav) {
   run.coachQueue.push({ id, nav });
 }
 
+// A tip may wait several months in the queue: check it still makes sense when it is shown.
+function refresh(run, item) {
+  const s = run.state, act = s.products.filter((p) => p.active);
+  if (item.id === 'expand') return s.expansions < run.world.plant.maxExpansions ? item : null;
+  if (item.id === 'editions' || item.id === 'advertising') {
+    const [kind, uid] = item.nav.target.split(':');
+    if (act.some((p) => p.uid === uid)) return item;
+    return act.length ? { ...item, nav: { ...item.nav, target: `${kind}:${act[0].uid}` } } : null;
+  }
+  return item;
+}
+
 function emit(run) {
-  if ((run.tutorial && run.tutorial.step !== 'done') || !run.coachQueue.length || run.lastCoachMonth === run.state.month || run.state.ended) return;
-  const item = run.coachQueue.shift();
+  if ((run.tutorial && run.tutorial.step !== 'done') || run.lastCoachMonth === run.state.month || run.state.ended) return;
+  let item = null;
+  while (!item && run.coachQueue.length) item = refresh(run, run.coachQueue.shift());
+  if (!item) return;
   say(run, 'coach', { id: item.id, nav: item.nav });
   run.coachSeen.push(item.id); run.lastCoachMonth = run.state.month;
   run.coachActive = item.nav.target ?? `tab:${item.nav.tab}`;

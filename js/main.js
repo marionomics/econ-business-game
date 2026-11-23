@@ -29,7 +29,7 @@ function showLine() { view = 'line'; app.innerHTML = lineScreen(store.getIdentit
 function showGame() {
   view = 'game';
   app.innerHTML = `<div id="top"></div><div class="layout"><div id="dash"></div>
-    <aside class="chat${ui.chatOpen ? ' open' : ''}" id="chatbox" aria-label="${esc(fmt('ui.chat'))}"><div class="chat-head"><span class="cfo-eye" id="eye"></span>
+    <aside class="chat${ui.chatOpen ? ' open' : ''}" id="chatbox" data-tour="chat" aria-label="${esc(fmt('ui.chat'))}"><div class="chat-head"><span class="cfo-eye" id="eye"></span>
       <div><strong>${esc(CFO_NAME)}</strong><small>${esc(fmt('ui.skip'))}</small></div>
       <button class="btn btn-ghost btn-sm chat-toggle" data-chat-toggle>${icon('chat')}<span>${esc(fmt(ui.chatOpen ? 'ui.chat.close' : 'ui.chat.open'))}</span></button></div>
     <div class="chat-log" id="chatlog" aria-live="polite"></div></aside></div><div id="overlay"></div>`;
@@ -85,7 +85,7 @@ function renderMessage(msg) {
   if (msg.type === 'tutorial' && last && run.tutorial?.step === 'tour') btns.push(button({ label: fmt('ui.tutorial.next'), size: 'sm', attrs: 'data-tut-next' }));
   if (msg.type === 'tutorial' && last && run.tutorial?.step === 'fix') btns.push(button({ label: fmt('ui.tutorial.skipFix'), variant: 'ghost', size: 'sm', attrs: 'data-tut-skip' }));
   for (const n of msg.nav ?? []) btns.push(button({ label: n.label, variant: 'outline', size: 'sm', attrs: `data-nav-tab="${esc(n.tab ?? '')}" data-nav-target="${esc(n.target ?? '')}"` }));
-  if (msg.type === 'coach' && last && run.unseen > 0) btns.push(button({ label: fmt('ui.coach.ok'), size: 'sm', attrs: 'data-clock="play"' }));
+  if (msg.type === 'coach' && last && run.unseen > 0) btns.push(button({ label: fmt('ui.coach.ok'), size: 'sm', attrs: 'data-coach-ok' }));
   if (btns.length) inner += `<div class="navs">${btns.join('')}</div>`;
   return `<div class="msg ${msg.tone ?? ''}" id="msg-${msg.seq}">${meta}${inner}${msg.chartSvg ? `<div class="chart">${msg.chartSvg}</div>` : ''}</div>`;
 }
@@ -160,7 +160,8 @@ function showEnding() {
   if (endingShown) return; endingShown = true; clock.pause('ended');
   store.addToGallery(classifyEndingSafe());
   store.clearCurrentRun();
-  const draw = () => { const o = document.getElementById('overlay'); if (o && view === 'game') o.innerHTML = endingDialog(run, store.getGallery(), sendStatus); };
+  ui.endingOpen = true;
+  const draw = () => { const o = document.getElementById('overlay'); if (o && view === 'game' && ui.endingOpen) o.innerHTML = endingDialog(run, store.getGallery(), sendStatus); };
   sendStatus = 'sending'; draw();
   sendResult(APPS_SCRIPT_URL, buildResultRow(run, store.getGallery())).then((r) => { sendStatus = r; draw(); });
 }
@@ -168,7 +169,7 @@ const classifyEndingSafe = () => classifyEnding(run.state);
 
 // Abandon the current run (not sent) and go back to the strategy screen.
 function restart() {
-  clock.pause('user'); store.clearCurrentRun(); run = null; endingShown = false; sendStatus = null; lastHighlight = '';
+  clock.pause('user'); store.clearCurrentRun(); run = null; endingShown = false; sendStatus = null; lastHighlight = ''; ui.endingOpen = false;
   showLine();
 }
 
@@ -176,7 +177,7 @@ function newRun(line) {
   const id = store.getIdentity();
   const tutorial = !store.getTutorialDone() || store.getReplayTutorial(); store.setReplayTutorial(false);
   run = createRun({ seed: newSeed(), line, tutorial, coachSeen: store.getCoachSeen(), meta: { ...id, locale: getLocale(), runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
-  endingShown = false; sendStatus = null; ui.tab = 'productos'; ui.focus = null;
+  endingShown = false; sendStatus = null; ui.tab = 'productos'; ui.focus = null; ui.endingOpen = false;
   clock.pause(tutorial ? 'tutorial' : 'user'); store.saveCurrentRun(run); showGame(); applyHighlight();
 }
 
@@ -204,7 +205,7 @@ document.addEventListener('click', (e) => {
   const t = e.target.closest('button, [data-term]'); if (!t) { if (!e.target.closest('.popover')) closePopover(); return; }
   if (t.dataset.term) { e.preventDefault(); openPopover(t); return; }
   if (t.matches('[data-close-popover]')) return closePopover();
-  if (t.matches('[data-close-dialog]')) { document.getElementById('overlay').innerHTML = ''; return; }
+  if (t.matches('[data-close-dialog]')) { document.getElementById('overlay').innerHTML = ''; ui.endingOpen = false; return; }
   if (t.dataset.dialog) { document.getElementById('overlay').innerHTML = t.dataset.dialog === 'manual' ? manualDialog() : galleryDialog(store.getGallery()); return; }
   if (t.matches('[data-restart]')) { clock.pause('user'); renderTop();
     document.getElementById('overlay').innerHTML = dialog({ title: fmt('ui.restart.title'), body: `<p>${esc(fmt('ui.restart.body'))}</p>`,
@@ -212,9 +213,10 @@ document.addEventListener('click', (e) => {
     return; }
   if (t.matches('[data-restart-confirm]')) { restart(); return; }
   if (t.matches('[data-newrun]')) { showLine(); return; }
-  if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); return; }
+  if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); ui.endingOpen = true; return; }
   if (t.dataset.lang) { switchLocale(t.dataset.lang); return; }
   if (t.dataset.line) { newRun(t.dataset.line); return; }
+  if (t.matches('[data-coach-ok]')) { run = ackEvents(run); save(); renderTop(); refreshQuestionMessages(); applyHighlight(); return; } // acknowledge only; time stays paused
   if (t.matches('[data-tut-next]')) { run = tutorialNext(run); afterChange(); return; }
   if (t.matches('[data-tut-skip]')) { run = tutorialSkipFix(run); afterChange(); return; }
   if (t.dataset.navTab !== undefined) { navigate(t.dataset.navTab, t.dataset.navTarget); return; }
@@ -268,7 +270,7 @@ function applyLocale(l) { setLocale(l); document.documentElement.lang = getLocal
 function switchLocale(l) {
   applyLocale(l); store.setLocaleStore(getLocale());
   if (view === 'welcome') showWelcome(); else if (view === 'line') showLine();
-  else if (view === 'game') { showGame(); if (endingShown) document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); applyHighlight(); } // never re-send
+  else if (view === 'game') { showGame(); if (endingShown && ui.endingOpen) document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); applyHighlight(); } // never re-send
 }
 
 // ---------- Start ----------
