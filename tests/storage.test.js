@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fakeStore, throwingStore } from './helpers.js';
+import { randomRun } from './support/randombot.js';
 import { getIdentity, setIdentity, nextRunNumber, saveCurrentRun, loadCurrentRun, clearCurrentRun,
   getGallery, addToGallery, enqueue, dequeueAll } from '../js/storage.js';
 
@@ -24,3 +25,5 @@ test('storage functions survive a store that throws', () => {
   saveCurrentRun({}, throwingStore); assert.deepEqual(getGallery(throwingStore), []); addToGallery('x', throwingStore);
   enqueue({}, throwingStore); assert.deepEqual(dequeueAll(throwingStore), []); });
 test('corrupt JSON is ignored', () => { const s = fakeStore(); s.setItem('ipo2.currentRun', '{bad'); assert.equal(loadCurrentRun(s), null); });
+test('a v2 run round-trips through storage', () => { const s = fakeStore(); const run = randomRun(4, 'premium');
+  saveCurrentRun(run, s); assert.deepEqual(loadCurrentRun(s), run); });

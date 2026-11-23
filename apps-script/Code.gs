@@ -1,10 +1,10 @@
-// Rumbo a la IPO — receptor de resultados. Pega este archivo en Extensiones → Apps Script de tu Google Sheet.
+// Rumbo a la IPO v2 — receptor de resultados. Pega este archivo en Extensiones → Apps Script de tu Google Sheet.
 // Ver README.md para los pasos de publicación.
 
-const SHEET = 'Intentos';
-const HEADERS = ['runId', 'timestamp', 'classCode', 'playerId', 'playerName', 'runNumber', 'seed', 'outcome',
-  'endingId', 'stageReached', 'quarterReached', 'checkpointItems', 'checkpointCorrect', 'checkpointPts', 'outcomePts',
-  'firmValue', 'benchmarkValue', 'valuePts', 'total', 'openText', 'galleryCount', 'decisionLog'];
+const SHEET = 'Intentos v2';
+const HEADERS = ['runId', 'timestamp', 'classCode', 'playerId', 'playerName', 'runNumber', 'seed', 'line', 'endingId',
+  'monthReached', 'bestSustained', 'ipoTarget', 'valuationPts', 'crisesOccurred', 'crisesSurvived', 'crisesPts', 'questionsAsked',
+  'questionsCorrect', 'questionsPts', 'total', 'galleryCount', 'log'];
 
 function sanitize_(v) {
   return (typeof v === 'string' && /^[=+\-@\t\r]/.test(v)) ? "'" + v : v;
@@ -39,13 +39,14 @@ function doPost(e) {
   }
 }
 
-// Ejecútala una vez a mano: crea la pestaña "Mejor intento" (mejor total por estudiante).
+// Ejecútala una vez a mano: crea la pestaña "Mejor intento v2" (mejor total por estudiante).
+// Columnas: D matrícula, E nombre, K mejor valuación sostenida, T total, U finales descubiertos.
 function setupBestTab() {
   sheet_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getSheetByName('Mejor intento') || ss.insertSheet('Mejor intento');
+  const sh = ss.getSheetByName('Mejor intento v2') || ss.insertSheet('Mejor intento v2');
   sh.clear();
   sh.getRange('A1').setFormula(
-    '=QUERY(Intentos!A:V, "select D, max(E), max(S), count(A), max(U) where D is not null group by D order by max(S) desc ' +
-    'label D \'Matrícula\', max(E) \'Nombre\', max(S) \'Mejor total\', count(A) \'Intentos\', max(U) \'Finales descubiertos\'", 1)');
+    '=QUERY(\'Intentos v2\'!A:V, "select D, max(E), max(T), count(A), max(K), max(U) where D is not null group by D order by max(T) desc ' +
+    'label D \'Matrícula\', max(E) \'Nombre\', max(T) \'Mejor total\', count(A) \'Intentos\', max(K) \'Mejor valuación\', max(U) \'Finales descubiertos\'", 1)');
 }
