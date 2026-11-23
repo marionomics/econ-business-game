@@ -18,14 +18,14 @@ export function classifyEnding(state, params) {
   const lowRounds = state.rounds.filter((r) => r.me === 'L').length;
   if (state.bankrupt) {
     if (state.quarters.some((q) => q.P < q.c)) return 'quiebra_bajo_costo';
-    if (lowRounds >= 2) return 'quiebra_guerra';
+    if (state.rounds.some((r) => r.rival === 'L')) return 'quiebra_guerra';
     return 'quiebra_sobreinversion';
   }
   if (state.move === 'bloquear') return 'regulador';
   if (isIpoEligible(state, params)) {
-    if (state.rounds.filter((r) => r.me === 'H' && r.rival === 'H').length >= 2) return 'ipo_duopolio';
     if (state.investment === 'marca') return 'ipo_premium';
     if (state.investment === 'tostadora') return 'ipo_volumen';
+    if (state.rounds.filter((r) => r.me === 'H' && r.rival === 'H').length >= 2) return 'ipo_duopolio';
     const high = state.rounds.filter((r) => r.me === 'H').length;
     return high > state.rounds.length / 2 ? 'ipo_premium' : 'ipo_volumen';
   }
