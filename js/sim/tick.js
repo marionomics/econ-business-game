@@ -2,6 +2,7 @@
 import { quantityAt } from '../economy.js';
 import { productDemand, productCost, rivalShare, surplus, elasticityAt, fixedAdd } from './market.js';
 import { applyDueWildcards, resolveCrises } from './wildcards.js';
+import { rivalStep } from './rival.js';
 
 export const MAX_MONTHS = 36;
 
@@ -37,6 +38,7 @@ export function tick(input, world) {
     events.push({ type: 'repositioned', line: s.line });
   }
   applyDueWildcards(s, world, events);
+  rivalStep(s, world, events);
 
   const perProduct = [];
   for (const p of s.products) {
