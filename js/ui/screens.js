@@ -3,6 +3,7 @@ import { esc } from './dom.js';
 import { button, card, dialog, richText, richInline } from './components.js';
 import { fmt, number, gradingIntro, endingText, CFO_NAME, cfoLong } from '../content/copy.js';
 import { glossaryAll } from '../content/glossary.js';
+import { linkCore } from '../content/core.js';
 import { ENDINGS, classifyEnding } from '../sim/endings.js';
 
 export function welcomeScreen(id = {}, error = '') {
@@ -39,6 +40,6 @@ export function galleryDialog(gallery) {
 }
 
 export function manualDialog() {
-  const body = glossaryAll().map((g) => `<h3>${esc(g.title)}</h3><p>${esc(g.body)}</p>${g.formula ? `<p class="formula">${esc(g.formula)}</p>` : ''}${g.core ? `<p class="core">${esc(g.core)}</p>` : ''}`).join('');
+  const body = glossaryAll().map((g) => `<h3>${esc(g.title)}</h3><p>${esc(g.body)}</p>${g.formula ? `<p class="formula">${esc(g.formula)}</p>` : ''}${g.core ? `<p class="core">${linkCore(esc(g.core))} ↗</p>` : ''}`).join('');
   return dialog({ title: fmt('ui.manual'), body: `<div class="glossary">${body}</div>` });
 }

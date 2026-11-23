@@ -1,6 +1,7 @@
 // String components styled like the shadcn preset. Events are delegated in main.js via data-* attributes.
 import { esc, icon } from './dom.js';
 import { glossaryTerm } from '../content/glossary.js';
+import { linkCore } from '../content/core.js';
 
 export const button = ({ label, variant = 'default', size = 'md', attrs = '', ico = '' }) =>
   `<button class="btn btn-${variant} btn-${size}" ${attrs}>${ico ? icon(ico) : ''}<span>${esc(label)}</span></button>`;
@@ -17,7 +18,7 @@ export function richText(text) {
       out += esc(par.slice(last, m.index)) + `<span class="term">${esc(label)}${infoButton(m[1], label)}</span>`;
       last = m.index + m[0].length;
     }
-    return `<p>${out + esc(par.slice(last))}</p>`;
+    return `<p>${linkCore(out + esc(par.slice(last)))}</p>`;
   }).join('');
 }
 // Like richText but inline (no paragraphs), for labels.
@@ -38,7 +39,7 @@ export function popover(term) {
   const g = glossaryTerm(term); if (!g) return '';
   return `<div class="popover" role="dialog" aria-label="${esc(g.title)}"><div class="popover-head"><strong>${esc(g.title)}</strong>
     <button class="btn btn-ghost btn-icon" data-close-popover aria-label="Cerrar">${icon('close')}</button></div>
-    <p>${esc(g.body)}</p>${g.formula ? `<p class="formula">${esc(g.formula)}</p>` : ''}${g.core ? `<p class="core">${esc(g.core)}</p>` : ''}</div>`;
+    <p>${esc(g.body)}</p>${g.formula ? `<p class="formula">${esc(g.formula)}</p>` : ''}${g.core ? `<p class="core">${linkCore(esc(g.core))} ↗</p>` : ''}</div>`;
 }
 
 export const dialog = ({ title, body, actions = '' }) =>
