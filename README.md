@@ -4,6 +4,16 @@ Un simulador en vivo de una fábrica de galletas para la **Unidad 7 de CORE Econ
 
 La versión 1 (el juego de texto lineal) está guardada en la etiqueta `v1-final` del repositorio.
 
+## Primera partida: el tutorial
+
+La primera vez que un alumno juega, M.A.R.G.E.N. lo guía paso a paso: un recorrido por el tablero (caja, valuación, el reloj, las pestañas, el chat y los ⓘ), lanzar **una** galleta, presionar Continuar mientras está en desarrollo, diagnosticar el primer mes de ventas con la gráfica de demanda (con una pregunta calificada), corregir el precio y ver subir la utilidad: su **primer triunfo**. Si ignora la guía, puede quebrar: también se aprende. En partidas siguientes no aparece; en la pantalla de estrategia hay una casilla **"Repetir el tutorial en la próxima partida"**.
+
+Además hay **mini-tutoriales** que aparecen una sola vez por alumno la primera vez que ocurre algo (segundo producto, primera publicidad, primera valuación, llega el rival, se desbloquean las ediciones, primer choque de costos o de demanda, el regulador, cuando ampliar la planta empieza a convenir), y los **avisos** de M.A.R.G.E.N. dicen qué pasó, cuál es el culpable principal y llevan con un botón a la pestaña donde se arregla.
+
+## Idiomas
+
+Español e inglés, con selector ES | EN en la pantalla inicial y en la barra superior (por defecto, el idioma del navegador). Los ⓘ y el Manual del CFO enlazan cada sección de CORE (*The Economy 2.0*, Unidad 7) en el idioma del alumno. El idioma de cada partida queda en el `log` de su fila del Sheet (no hay que cambiar el Apps Script).
+
 ## Cómo se califica (de 100; cuenta el mejor intento)
 
 | Componente | Puntos |
@@ -41,8 +51,9 @@ Las filas de la v1 se quedan en la pestaña `Intentos` y no se mezclan.
 
 ## Editar textos
 
-- **Todo lo que dice el CFO, los botones, las preguntas y los finales:** `js/content/copy.js`.
-- **Las explicaciones de los íconos ⓘ y el Manual del CFO:** `js/content/glossary.js`.
+- **Todo lo que dice el CFO, los botones, las preguntas, el tutorial y los finales:** `js/content/copy.es.js` (español) y `js/content/copy.en.js` (inglés).
+- **Las explicaciones de los íconos ⓘ y el Manual del CFO:** `js/content/glossary.es.js` y `js/content/glossary.en.js`.
+- Si agregas o cambias una llave en un idioma, cámbiala también en el otro: `npm test` avisa si no coinciden.
 - En los textos, `{x}` inserta un número, `{$x}` un monto en pesos y `[[termino]]` o `[[termino|texto]]` crea un ⓘ con la entrada del glosario.
 - Después de editar, corre `npm test`: avisa si quedó una variable o un término sin definir.
 
