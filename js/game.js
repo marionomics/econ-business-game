@@ -4,7 +4,7 @@ import { quantityAt } from './economy.js';
 import { SCRIPT, STAGE_OF, initialState, decisionOptions, resolveDecision, decisionApplies,
   stage3Matrix, stage3Prices, stage3Segments } from './engine.js';
 import { classifyEnding } from './endings.js';
-import { assignConcepts, buildCheckpoint, gradeCheckpoint, parseNumber } from './checkpoints.js';
+import { assignConcepts, buildCheckpoint, gradeCheckpoint, parseNumber, parseNumberCandidates } from './checkpoints.js';
 import { scoreRun, benchmarkValue, firmValue } from './scoring.js';
 
 const SLOT_OFFSET = { s1: 0, s2: 3, s3: 6 };
@@ -102,12 +102,13 @@ export function advance(input_run, input) {
   }
   if (e.kind === 'checkpoint') {
     const built = checkpointAt(run, e);
-    let value = input;
+    let value = input, candidates = input;
     if (built.kind === 'numeric') {
+      candidates = typeof input === 'number' ? [input] : parseNumberCandidates(input);
       value = typeof input === 'number' ? input : parseNumber(input);
-      if (value === null || !Number.isFinite(value)) { run.inputError = true; return run; }
+      if (!candidates.length || value === null || !Number.isFinite(value)) { run.inputError = true; return run; }
     } else if (!built.options.some((o) => o.id === input)) { run.inputError = true; return run; }
-    const correct = gradeCheckpoint(built, value);
+    const correct = gradeCheckpoint(built, candidates);
     run.checkpoints.push({ itemId: built.itemId, concept: built.concept, input: value, answer: built.answer, correct });
     run.pending = { kind: 'feedback', correct, built, input: value };
     run.cpIndex++; run.cursor++;

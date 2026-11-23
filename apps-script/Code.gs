@@ -10,6 +10,12 @@ function sanitize_(v) {
   return (typeof v === 'string' && /^[=+\-@\t\r]/.test(v)) ? "'" + v : v;
 }
 
+// Force text so all-digit IDs keep leading zeros and never mix types in the QUERY tab.
+function asText_(v) {
+  v = String(v);
+  return v.charAt(0) === "'" ? v : "'" + v;
+}
+
 function sheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET);
@@ -25,7 +31,8 @@ function doPost(e) {
     const row = JSON.parse(e.postData.contents);
     const sh = sheet_();
     const dup = sh.getRange('A:A').createTextFinder(String(row.runId)).matchEntireCell(true).findNext();
-    if (!dup) sh.appendRow(HEADERS.map(function (h) { return row[h] === undefined ? '' : sanitize_(row[h]); }));
+    if (!dup) sh.appendRow(HEADERS.map(function (h) { if (h === 'playerId' || h === 'classCode') return asText_(row[h] === undefined ? '' : row[h]);
+      return row[h] === undefined ? '' : sanitize_(row[h]); }));
     return ContentService.createTextOutput('ok');
   } finally {
     lock.releaseLock();

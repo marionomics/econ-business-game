@@ -20,4 +20,6 @@ export const clearCurrentRun = (store) => remove(K.run, store);
 export const getGallery = (store) => { const g = read(K.gallery, [], store); return Array.isArray(g) ? g : []; };
 export function addToGallery(id, store) { const g = getGallery(store); if (!g.includes(id)) g.push(id); write(K.gallery, g, store); return g; }
 export function enqueue(row, store) { const q = read(K.queue, [], store); q.push(row); write(K.queue, q, store); }
+export const peekQueue = (store) => { const q = read(K.queue, [], store); return Array.isArray(q) ? q : []; };
+export function removeFromQueue(runId, store) { write(K.queue, peekQueue(store).filter((r) => r.runId !== runId), store); }
 export function dequeueAll(store) { const q = read(K.queue, [], store); write(K.queue, [], store); return Array.isArray(q) ? q : []; }

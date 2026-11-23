@@ -75,7 +75,7 @@ export const T = {
   'qr.title': 'Resultado del trimestre {n}',
   'qr.numbers': 'Precio {$P} · Vendimos {Q} bolsas · Utilidad {$profit} · Caja {$cash}',
   'qr.precio.bajo_costo': 'Vendimos cada bolsa por debajo de lo que nos cuesta hacerla. Cada bolsa extra que vendemos aumenta la pérdida. Vender más no compensa: al contrario.',
-  'qr.precio.bajo': 'Vendimos mucho, pero el margen por bolsa fue chico. Entre este precio y uno un poco más alto la demanda era inelástica: subir el precio nos habría dado más ingreso con menos bolsas.',
+  'qr.precio.bajo': 'Vendimos mucho, pero el margen por bolsa fue chico. Con un precio un poco más alto habríamos perdido algo de ingreso, pero habríamos ahorrado más en costos al producir menos bolsas: más utilidad.',
   'qr.precio.optimo': 'Buen trimestre. Fue el punto en que ganar un poco más por bolsa ya no compensa las bolsas que dejaríamos de vender.',
   'qr.precio.alto': 'Margen grande, pocas bolsas. En esa zona la demanda es elástica: un precio un poco más bajo nos habría hecho vender bastante más.',
   'qr.ronda.HH': 'Los dos cobramos alto. Nos repartimos a los que comparan y cada quien se quedó con sus leales.',

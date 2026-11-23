@@ -46,7 +46,7 @@ export function decisionApplies(state, id, params) {
 
 export function stage3Prices(state) {
   const H = optimalPrice({ a: state.demand.a, c: state.cRival });
-  const L = state.cRival + Math.round(0.4 * (H - state.cRival));
+  const L = state.cRival + Math.round(0.38 * (H - state.cRival));
   return { H, L };
 }
 

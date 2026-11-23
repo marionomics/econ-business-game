@@ -1,6 +1,7 @@
 // DOM rendering. All text comes from content.js (describeStep / T); this file only lays it out.
 import { fmt, money, number, pct, MANUAL, GRADING_INTRO, ENDING_TEXT } from './content.js';
 import { ENDINGS } from './endings.js';
+import { acceptClick } from './clickguard.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const paras = (text) => String(text ?? '').split(/\n\n+/).map((p) => `<p>${esc(p)}</p>`).join('');
@@ -87,9 +88,11 @@ export function render(root, view, h) {
   if (view.kind === 'welcome') root.innerHTML = welcome(view);
   else root.innerHTML = `${ledger(view)}<main class="wrap enter">${view.notice ? `<p class="note">${esc(view.notice)}</p>` : ''}${stepBody(view.described, view)}</main>${panel(view)}`;
   const q = (s) => root.querySelector(s);
-  root.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => { b.disabled = true; h.onInput(b.dataset.opt); }));
-  q('[data-next]')?.addEventListener('click', () => h.onInput(null));
-  q('[data-new]')?.addEventListener('click', (e) => { e.target.disabled = true; h.onNewRun(); });
+  const renderedAt = performance.now();
+  const guarded = (fn) => (e) => { if (acceptClick(e, performance.now(), renderedAt)) fn(e); };
+  root.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', guarded(() => { b.disabled = true; h.onInput(b.dataset.opt); })));
+  q('[data-next]')?.addEventListener('click', guarded(() => h.onInput(null)));
+  q('[data-new]')?.addEventListener('click', guarded((e) => { e.target.disabled = true; h.onNewRun(); }));
   q('form[data-num]')?.addEventListener('submit', (e) => { e.preventDefault(); h.onInput(e.target.v.value); });
   q('form[data-text]')?.addEventListener('submit', (e) => { e.preventDefault(); e.target.querySelector('button').disabled = true; h.onInput(e.target.v.value); });
   q('form[data-welcome]')?.addEventListener('submit', (e) => { e.preventDefault(); h.onStart(Object.fromEntries(new FormData(e.target))); });

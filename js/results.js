@@ -1,5 +1,5 @@
 // One Sheet row per finished run, and a send queue that survives being offline.
-import { enqueue, dequeueAll } from './storage.js';
+import { enqueue, peekQueue, removeFromQueue } from './storage.js';
 import { endingType } from './endings.js';
 import { STAGE_OF } from './engine.js';
 
@@ -36,16 +36,19 @@ async function post(url, row, fetchImpl) {
   await fetchImpl(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) });
 }
 
+// The row is queued BEFORE posting and removed only after the post resolves, so closing the tab
+// or a hanging network never loses it. The Apps Script drops duplicate runIds.
 export async function sendResult(url, row, { fetchImpl = globalThis.fetch, store } = {}) {
-  if (!url) { enqueue(row, store); return 'queued'; }
-  try { await post(url, row, fetchImpl); return 'sent'; } catch { enqueue(row, store); return 'queued'; }
+  if (!peekQueue(store).some((r) => r.runId === row.runId)) enqueue(row, store);
+  if (!url) return 'queued';
+  try { await post(url, row, fetchImpl); removeFromQueue(row.runId, store); return 'sent'; } catch { return 'queued'; }
 }
 
 export async function flushQueue(url, { fetchImpl = globalThis.fetch, store } = {}) {
   if (!url) return 0;
-  const rows = dequeueAll(store); let sent = 0;
-  for (const row of rows) {
-    try { await post(url, row, fetchImpl); sent++; } catch { enqueue(row, store); }
+  let sent = 0;
+  for (const row of peekQueue(store)) {
+    try { await post(url, row, fetchImpl); removeFromQueue(row.runId, store); sent++; } catch { /* stays queued */ }
   }
   return sent;
 }

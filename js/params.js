@@ -9,10 +9,10 @@ export const TUNING = {
   F: 0.3, cash0: 0.75, ipoCash: 1.2,
   shockFixed: 0.1, shockMarginal: 8,
   roasterCost: 0.65, roasterDF: 0.05, roasterDc: 8,
-  brandCost: 0.45, brandDa: 16, brandDLoyal: 0.15,
+  brandCost: 0.45, brandDa: 16, brandDLoyal: 0.16,
   loyaltyCost: 0.35, loyaltyDLoyal: 0.2,
   blockCost: 0.35, blockDLoyal: 0.1,
-  marketN: 2.5, loyalBase: [0.15, 0.2, 0.25, 0.3], priceDrivenShare: 1 / 3,
+  marketN: 2.5, loyalBase: [0.17, 0.21, 0.27, 0.31], priceDrivenShare: 1 / 3,
 };
 
 export function generateParams(seed) {

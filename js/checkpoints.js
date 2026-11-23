@@ -138,10 +138,27 @@ export function buildCheckpoint(concept, state, params, seed, index) {
   return { itemId: item.id, concept, promptKey: `cp.${item.id}.prompt`, explanationKey: `cp.${item.id}.explain`, ...b };
 }
 
+// Elasticity is reported as a positive number in CORE; accept the signed convention too.
+const ABS_ITEMS = new Set(['elast_arco', 'markup_eps']);
+
 export function gradeCheckpoint(built, input) {
   if (built.kind === 'mc') return input === built.answer;
+  if (Array.isArray(input)) return input.some((x) => gradeCheckpoint(built, x));
   if (typeof input !== 'number' || !Number.isFinite(input)) return false;
-  return Math.abs(input - built.answer) <= Math.max(0.02 * Math.abs(built.answer), 0.01);
+  const x = ABS_ITEMS.has(built.itemId) ? Math.abs(input) : input;
+  return Math.abs(x - built.answer) <= Math.max(0.02 * Math.abs(built.answer), 0.01);
+}
+
+// "1.250" or "1,250" can mean 1250 or 1.25 depending on the reader's convention: return both readings.
+export function parseNumberCandidates(text) {
+  const main = parseNumber(text);
+  if (main === null) return [];
+  const t = String(text).trim().replace(/[$\s]/g, '').replace(/−/g, '-');
+  if (/^-?\d{1,3}[.,]\d{3}$/.test(t)) {
+    const digits = Number(t.replace(/[.,]/, '')), dec = Number(t.replace(',', '.'));
+    return [...new Set([digits, dec])];
+  }
+  return [main];
 }
 
 export function parseNumber(text) {

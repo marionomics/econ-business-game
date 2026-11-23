@@ -38,8 +38,10 @@ export function gameType(m) {
   const ne = nashEquilibria(m);
   const has = (x) => ne.includes(x);
   if (has('HH') && has('LL')) return 'coordinacion';
-  if (ne.length === 1 && has('LL') && m.HH[0] > m.LL[0] && m.HH[1] > m.LL[1]) return 'dilema';
-  if (ne.length === 1 && has('HH')) return 'dominante_H';
+  const lDomMe = m.LH[0] > m.HH[0] && m.LL[0] > m.HL[0], lDomRiv = m.HL[1] > m.HH[1] && m.LL[1] > m.LH[1];
+  const hDomMe = m.HH[0] > m.LH[0] && m.HL[0] > m.LL[0], hDomRiv = m.HH[1] > m.HL[1] && m.LH[1] > m.LL[1];
+  if (lDomMe && lDomRiv && m.HH[0] > m.LL[0] && m.HH[1] > m.LL[1]) return 'dilema';
+  if (hDomMe && hDomRiv) return 'dominante_H';
   return 'otro';
 }
 
