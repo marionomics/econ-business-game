@@ -27,3 +27,12 @@ test('storage functions survive a store that throws', () => {
 test('corrupt JSON is ignored', () => { const s = fakeStore(); s.setItem('ipo2.currentRun', '{bad'); assert.equal(loadCurrentRun(s), null); });
 test('a v2 run round-trips through storage', () => { const s = fakeStore(); const run = randomRun(4, 'premium');
   saveCurrentRun(run, s); assert.deepEqual(loadCurrentRun(s), run); });
+import { getTutorialDone, setTutorialDone, getReplayTutorial, setReplayTutorial, getCoachSeen, addCoachSeen, getLocaleStore, setLocaleStore } from '../js/storage.js';
+test('tutorial, replay, coach and locale flags', () => { const s = fakeStore();
+  assert.equal(getTutorialDone(s), false); setTutorialDone(true, s); assert.equal(getTutorialDone(s), true);
+  assert.equal(getReplayTutorial(s), false); setReplayTutorial(true, s); assert.equal(getReplayTutorial(s), true);
+  assert.deepEqual(getCoachSeen(s), []); addCoachSeen('rival', s); addCoachSeen('rival', s); addCoachSeen('expand', s); assert.deepEqual(getCoachSeen(s), ['rival', 'expand']);
+  assert.equal(getLocaleStore(s), null); setLocaleStore('en', s); assert.equal(getLocaleStore(s), 'en'); });
+test('new flags survive a throwing store', () => {
+  assert.equal(getTutorialDone(throwingStore), false); assert.deepEqual(getCoachSeen(throwingStore), []); assert.equal(getLocaleStore(throwingStore), null);
+  setTutorialDone(true, throwingStore); addCoachSeen('x', throwingStore); setLocaleStore('en', throwingStore); });

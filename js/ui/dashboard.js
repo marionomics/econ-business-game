@@ -27,15 +27,15 @@ export function renderTopbar(run, ui, clock) {
   const reason = clock.paused ? (s.ended ? '' : fmt(`ui.paused.${clock.reason && t()[`ui.paused.${clock.reason}`] ? clock.reason : 'user'}`)) : '';
   return `<header class="topbar"><div class="topbar-in">
     <div class="brand"><span>${esc(run.meta.firmName ?? fmt('ui.title'))}</span><small>${esc(fmt('ui.month', { m: s.month }))} · ${esc(fmt(`ui.line.${s.line}`))}</small></div>
-    <div class="clockctl">
+    <div class="clockctl" data-tour="clock">
       ${s.ended ? button({ label: 'Ver final', variant: 'outline', size: 'sm', attrs: 'data-show-ending' }) + button({ label: fmt('ui.end.new'), size: 'sm', attrs: 'data-newrun' })
-        : button({ label: playing ? fmt('ui.pause') : fmt('ui.play'), variant: playing ? 'outline' : 'default', size: 'sm', ico: playing ? 'pause' : 'play', attrs: `data-clock="${playing ? 'pause' : 'play'}"` })}
+        : button({ label: playing ? fmt('ui.pause') : fmt('ui.play'), variant: playing ? 'outline' : 'default', size: 'sm', ico: playing ? 'pause' : 'play', attrs: `data-clock="${playing ? 'pause' : 'play'}" data-tour="clock-play"` })}
       ${button({ label: fmt('ui.speed1'), variant: 'ghost', size: 'sm', attrs: `data-speed="1" aria-pressed="${clock.speed === 1}"` })}
       ${button({ label: fmt('ui.speed2'), variant: 'ghost', size: 'sm', attrs: `data-speed="2" aria-pressed="${clock.speed === 2}"` })}
     </div>
     <div class="kpis">
-      <div class="kpi"><small>${esc(fmt('ui.cash'))} ${infoButton('flujo_caja')}</small><b class="${s.cash < 0 ? 'neg' : ''}">${esc(money(s.cash))}</b></div>
-      <div class="kpi"><small>${esc(fmt('ui.valuation'))} ${infoButton('valuacion')}</small><b>${esc(money(val))}</b></div>
+      <div class="kpi" data-tour="cash"><small>${esc(fmt('ui.cash'))} <span data-tour="info">${infoButton('flujo_caja')}</span></small><b class="${s.cash < 0 ? 'neg' : ''}">${esc(money(s.cash))}</b></div>
+      <div class="kpi" data-tour="valuation"><small>${esc(fmt('ui.valuation'))} ${infoButton('valuacion')}</small><b>${esc(money(val))}</b></div>
       <div class="toollinks">${button({ label: fmt('ui.manual'), variant: 'ghost', size: 'sm', ico: 'book', attrs: 'data-dialog="manual"' })}
         ${button({ label: fmt('ui.gallery'), variant: 'ghost', size: 'sm', ico: 'star', attrs: 'data-dialog="gallery"' })}</div>
     </div>
@@ -91,7 +91,7 @@ function mercado(run, ui) {
   const stats = [[L('ui.mkt.share') + ' ' + infoButton('lealtad'), row && !row.inDevelopment ? pct(row.share) : '—'], [esc(fmt('ui.mkt.rival')) + ' ' + infoButton('competencia'), esc(rival)],
     [L('ui.mkt.elasticity'), eps === null ? '—' : number(Math.round(eps * 100) / 100)], ['Demanda', `P = ${number(d.a)} − ${slope(d.b)}·Q`],
     [L('ui.mkt.cs'), money(sp.cs)], [L('ui.mkt.ps'), money(sp.ps)], [L('ui.mkt.dwl'), money(sp.dwl)]];
-  return productPicker(run, ui) + `<div class="grid2">${card({ title: L('ui.mkt.title', { product: nameOf(p) }), body: `<div class="chart">${chart}</div>${legend}` })}
+  return productPicker(run, ui) + `<div class="grid2">${card({ title: L('ui.mkt.title', { product: nameOf(p) }), body: `<div class="chart" data-tour="demand-chart">${chart}</div>${legend}` })}
     ${card({ body: stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${typeof v === 'string' && v.startsWith('<') ? v : esc(v)}</b></div>`).join('') })}</div>`;
 }
 
@@ -122,14 +122,14 @@ function productos(run, ui) {
       <span class="muted">${dev ? esc(fmt('ui.prod.dev', { m: p.readyAt + 1 })) : `CMg ${esc(money(c))} · ${L('ui.prod.loyal', { pct: pct(p.loyalty) })}`}</span></div>
       <div class="controls">${p.versions ? `<p class="muted">Con ediciones, los precios son los de la edición premium y la básica (abajo).</p>` : stepper({ id: `price:${p.uid}`, value: p.price, min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.price')) })}
       ${stepper({ id: `ad:${p.uid}`, value: p.ad, min: 0, max: 10 * p.launchCost, step: 1000, label: L('ui.prod.ad') })}</div>
-      <div style="margin-top:10px">${versions}</div>
+      <div style="margin-top:10px" data-tour="versions:${esc(p.uid)}">${versions}</div>
       <div style="margin-top:10px">${button({ label: fmt('ui.prod.discontinue'), variant: 'destructive', size: 'sm', attrs: `data-act="discontinue" data-uid="${esc(p.uid)}"` })}</div></div>`;
   }).join('') || `<p class="muted">Aún no tienes productos. Lanza el primero abajo.</p>`;
   const launch = launchableTemplates(s, w).map((t) => `<button class="btn btn-outline" data-act="launch" data-template="${esc(t.id)}"${s.repositioning ? ' disabled' : ''}>
     <span>${esc(templateName(t.id))}</span><small>${esc(templateBlurb(t.id))}</small><small>${esc(fmt('ui.prod.cost', { cost: t.launchCost, n: t.devMonths }))}</small></button>`).join('');
-  const plant = `${button({ label: fmt('ui.prod.expand', { cost: w.plant.expandCost, dF: w.plant.expandDF, dc: w.plant.expandDc }), variant: 'outline', size: 'sm', attrs: `data-act="expand"${s.expansions >= w.plant.maxExpansions ? ' disabled' : ''}` })} ${infoButton('economias_escala')}
+  const plant = `${button({ label: fmt('ui.prod.expand', { cost: w.plant.expandCost, dF: w.plant.expandDF, dc: w.plant.expandDc }), variant: 'outline', size: 'sm', attrs: `data-act="expand" data-tour="expand"${s.expansions >= w.plant.maxExpansions ? ' disabled' : ''}` })} ${infoButton('economias_escala')}
     <div style="margin-top:8px">${button({ label: fmt('ui.prod.reposition', { cost: w.reposition.cost, n: w.reposition.months }).replace(/\[\[(\w+)\|([^\]]*)\]\]/g, '$2'), variant: 'ghost', size: 'sm', attrs: `data-act="reposition"${s.repositioning ? ' disabled' : ''}` })} ${infoButton('reposicionamiento')}</div>`;
-  return card({ title: 'Tus productos', body: list }) + card({ title: `${esc(fmt('ui.prod.launch'))} ${infoButton('saturacion')}`, body: `<div class="launch">${launch}</div>` })
+  return card({ title: 'Tus productos', body: list }) + card({ title: `${esc(fmt('ui.prod.launch'))} ${infoButton('saturacion')}`, body: `<div class="launch" data-tour="launch">${launch}</div>` })
     + card({ title: 'Planta y estrategia', body: plant });
 }
 

@@ -147,4 +147,10 @@ tr.total td { font-weight: 700; border-top: 2px solid var(--foreground); border-
   .card .btn-sm { white-space: normal; height: auto; min-height: 30px; padding: 6px 12px; text-align: left; max-width: 100%; }
 }
 body { overflow-x: hidden; }
+/* Tutorial spotlight: a ring that pulses around what the CFO is talking about */
+.spotlight { position: relative; z-index: 5; border-radius: calc(var(--radius) * 1.4); box-shadow: 0 0 0 3px var(--primary), 0 0 18px 2px color-mix(in oklch, var(--primary) 45%, transparent); animation: spot 1.6s ease-in-out infinite; }
+@keyframes spot { 50% { box-shadow: 0 0 0 5px var(--primary), 0 0 28px 6px color-mix(in oklch, var(--primary) 30%, transparent); } }
+.msg.tutorial { background: color-mix(in oklch, var(--primary) 12%, var(--card)); border: 1px solid color-mix(in oklch, var(--primary) 35%, transparent); }
+.msg.coach { background: color-mix(in oklch, var(--chart-2) 18%, var(--card)); }
+.msg .navs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

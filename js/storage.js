@@ -23,3 +23,14 @@ export function enqueue(row, store) { const q = read(K.queue, [], store); q.push
 export const peekQueue = (store) => { const q = read(K.queue, [], store); return Array.isArray(q) ? q : []; };
 export function removeFromQueue(runId, store) { write(K.queue, peekQueue(store).filter((r) => r.runId !== runId), store); }
 export function dequeueAll(store) { const q = read(K.queue, [], store); write(K.queue, [], store); return Array.isArray(q) ? q : []; }
+
+// v2.1: tutorial, mini-tutorials and language, per student (this browser).
+const K2 = { tut: 'ipo2.tutorialDone', replay: 'ipo2.replayTutorial', coach: 'ipo2.coachSeen', locale: 'ipo2.locale' };
+export const getTutorialDone = (store) => read(K2.tut, false, store) === true;
+export const setTutorialDone = (v, store) => write(K2.tut, !!v, store);
+export const getReplayTutorial = (store) => read(K2.replay, false, store) === true;
+export const setReplayTutorial = (v, store) => write(K2.replay, !!v, store);
+export const getCoachSeen = (store) => { const v = read(K2.coach, [], store); return Array.isArray(v) ? v : []; };
+export function addCoachSeen(id, store) { const v = getCoachSeen(store); if (!v.includes(id)) v.push(id); write(K2.coach, v, store); }
+export const getLocaleStore = (store) => read(K2.locale, null, store);
+export const setLocaleStore = (l, store) => write(K2.locale, l, store);

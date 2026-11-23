@@ -1,5 +1,7 @@
 // Wiring: identity → strategy → live run (clock + dashboard + CFO chat) → ending → results.
 import { createRun, act, step, answer, ackEvents, pauseReasons } from './sim/run.js';
+import { tutorialNext, tutorialSkipFix, tutorialHighlight } from './sim/tutorial.js';
+import { coachHighlight } from './sim/coach.js';
 import { describeMessage, describeQuestion, describeFeedback, fmt, CFO_NAME } from './content/copy.js';
 import { renderTopbar, renderDashboard, messageChart } from './ui/dashboard.js';
 import { welcomeScreen, lineScreen, endingDialog, galleryDialog, manualDialog } from './ui/screens.js';
@@ -21,7 +23,7 @@ const clock = createClock({ onTick, intervalFor: (sp) => (sp === 2 ? 2000 : 4000
 
 // ---------- Views ----------
 function showWelcome(error = '') { view = 'welcome'; app.innerHTML = welcomeScreen(store.getIdentity() ?? {}, error); }
-function showLine() { view = 'line'; app.innerHTML = lineScreen(store.getIdentity()?.firmName ?? ''); }
+function showLine() { view = 'line'; app.innerHTML = lineScreen(store.getIdentity()?.firmName ?? '', { tutorialDone: store.getTutorialDone(), replay: store.getReplayTutorial() }); }
 function showGame() {
   view = 'game';
   app.innerHTML = `<div id="top"></div><div class="layout"><div id="dash"></div>
@@ -35,6 +37,7 @@ function showGame() {
   log.innerHTML = run.inbox.map((m) => renderMessage(toChat(m))).join(''); log.scrollTop = log.scrollHeight;
   pushedSeq = run.seq;
   renderTop(); renderDash();
+  const waiting = pauseReasons(run); if (waiting.includes('tutorial') || waiting.includes('question')) openChat();
   if (run.state.ended) showEnding();
 }
 // Re-rendering between pointerdown and pointerup replaces the element under the cursor and the browser drops the click,
@@ -43,18 +46,22 @@ let pointerDown = false; const deferred = new Set();
 document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
 document.addEventListener('pointerup', () => { pointerDown = false;
   setTimeout(() => { if (deferred.has('top')) renderTop(); if (deferred.has('dash')) renderDash(true, false); deferred.clear(); }, 0); }, true);
-const renderTop = () => { if (pointerDown) { deferred.add('top'); return; } const el = document.getElementById('top'); if (el) el.innerHTML = renderTopbar(run, ui, clock); };
+const renderTop = () => { if (pointerDown) { deferred.add('top'); return; } const el = document.getElementById('top'); if (!el) return;
+  el.innerHTML = renderTopbar(run, ui, clock);
+  if (!applyingHighlight) { applyingHighlight = true; try { applyHighlight(); } finally { applyingHighlight = false; } } };
 function renderDash(force = false, cooldown = true) {
   const el = document.getElementById('dash'); if (!el) return;
   if (pointerDown) { deferred.add('dash'); return; }
   if (!force && el.contains(document.activeElement) && document.activeElement.matches('input')) return; // don't steal focus while typing
   el.innerHTML = renderDashboard(run, ui); if (cooldown) renderedAt = performance.now();
+  if (!applyingHighlight) { applyingHighlight = true; try { applyHighlight(); } finally { applyingHighlight = false; } }
 }
+let applyingHighlight = false;
 
 // ---------- Chat ----------
 function toChat(m) {
   const d = describeMessage(m, run);
-  return { seq: m.seq, month: m.month, type: m.type, tone: d.tone, text: d.text, question: d.question, feedback: d.feedback,
+  return { seq: m.seq, month: m.month, type: m.type, tone: d.tone, text: d.text, question: d.question, feedback: d.feedback, nav: d.nav,
     urgent: m.type === 'question' || d.tone === 'ending',
     chartSvg: d.chart ? messageChart(d.chart.kind, run) : '' };
 }
@@ -71,17 +78,43 @@ function renderMessage(msg) {
     const q = run.questions[msg.feedback], f = describeFeedback(q, run);
     inner = `<p class="${f.correct ? 'verdict-ok' : 'verdict-bad'}">${esc(f.title)}</p><p class="muted">${esc(f.detail)}</p>${richText(f.explanation)}`;
   } else inner = richText(msg.text);
+  const last = run.inbox.filter((x) => x.type === msg.type).at(-1)?.seq === msg.seq;
+  const btns = [];
+  if (msg.type === 'tutorial' && last && run.tutorial?.step === 'tour') btns.push(button({ label: fmt('ui.tutorial.next'), size: 'sm', attrs: 'data-tut-next' }));
+  if (msg.type === 'tutorial' && last && run.tutorial?.step === 'fix') btns.push(button({ label: fmt('ui.tutorial.skipFix'), variant: 'ghost', size: 'sm', attrs: 'data-tut-skip' }));
+  for (const n of msg.nav ?? []) btns.push(button({ label: n.label, variant: 'outline', size: 'sm', attrs: `data-nav-tab="${esc(n.tab ?? '')}" data-nav-target="${esc(n.target ?? '')}"` }));
+  if (msg.type === 'coach' && last && run.unseen > 0) btns.push(button({ label: fmt('ui.coach.ok'), size: 'sm', attrs: 'data-clock="play"' }));
+  if (btns.length) inner += `<div class="navs">${btns.join('')}</div>`;
   return `<div class="msg ${msg.tone ?? ''}" id="msg-${msg.seq}">${meta}${inner}${msg.chartSvg ? `<div class="chart">${msg.chartSvg}</div>` : ''}</div>`;
 }
 function pushNew() { for (const m of run.inbox.filter((x) => x.seq >= pushedSeq)) chat.push(toChat(m)); pushedSeq = run.seq; }
 function refreshQuestionMessages() {
-  for (const m of run.inbox.filter((x) => x.type === 'question')) { const el = document.getElementById(`msg-${m.seq}`); if (el) el.outerHTML = renderMessage(toChat(m)); }
+  for (const m of run.inbox.filter((x) => x.type === 'question' || x.type === 'tutorial' || x.type === 'coach')) { const el = document.getElementById(`msg-${m.seq}`); if (el) el.outerHTML = renderMessage(toChat(m)); }
 }
 
 function openChat() {
   if (ui.chatOpen) return; ui.chatOpen = true;
   document.getElementById('chatbox')?.classList.add('open');
   const span = document.querySelector('[data-chat-toggle] span'); if (span) span.textContent = fmt('ui.chat.close');
+}
+
+// ---------- Highlights ----------
+const TAB_OF = (target) => (target.startsWith('tab:') ? target.slice(4)
+  : /^(price|ad|versions):|^launch$|^expand$/.test(target) ? 'productos' : target === 'demand-chart' ? 'mercado' : null);
+function applyHighlight(extra = null) {
+  document.querySelectorAll('.spotlight').forEach((el) => el.classList.remove('spotlight'));
+  if (!run || view !== 'game') return;
+  for (const target of [tutorialHighlight(run), coachHighlight(run), extra].filter(Boolean)) {
+    const tab = TAB_OF(target);
+    if (tab && ui.tab !== tab) { ui.tab = tab; renderDash(true, false); }
+    const el = document.querySelector(`[data-tour="${CSS.escape(target)}"]`);
+    if (el) { el.classList.add('spotlight'); if (target === extra) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+}
+function navigate(tab, target) {
+  if (tab) { ui.tab = tab; renderDash(true, false); }
+  if (window.matchMedia('(max-width: 959px)').matches) { ui.chatOpen = false; document.getElementById('chatbox')?.classList.remove('open'); }
+  applyHighlight(target || (tab ? `tab:${tab}` : null));
 }
 
 // ---------- Game flow ----------
@@ -91,8 +124,13 @@ function afterChange() {
   const reasons = pauseReasons(run);
   if (reasons.includes('ended')) clock.pause('ended');
   else if (reasons.includes('question')) clock.pause('question');
+  else if (reasons.includes('tutorial')) clock.pause('tutorial');
+  if (clock.paused && clock.reason === 'tutorial' && !reasons.includes('tutorial')) clock.reason = 'user';
+  if (reasons.includes('tutorial')) openChat();
+  for (const id of run.coachSeen ?? []) store.addCoachSeen(id);
+  if (run.tutorial?.step === 'done') store.setTutorialDone(true);
   if (reasons.includes('question') || (reasons.includes('event') && clock.paused)) openChat(); // on phones the chat is a drawer
-  save(); renderTop(); renderDash();
+  save(); renderTop(); renderDash(); refreshQuestionMessages(); applyHighlight();
   if (run.state.ended) showEnding();
 }
 function onTick() {
@@ -124,9 +162,10 @@ const classifyEndingSafe = () => classifyEnding(run.state);
 
 function newRun(line) {
   const id = store.getIdentity();
-  run = createRun({ seed: newSeed(), line, meta: { ...id, runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
+  const tutorial = !store.getTutorialDone() || store.getReplayTutorial(); store.setReplayTutorial(false);
+  run = createRun({ seed: newSeed(), line, tutorial, coachSeen: store.getCoachSeen(), meta: { ...id, runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
   endingShown = false; sendStatus = null; ui.tab = 'productos'; ui.focus = null;
-  clock.pause('user'); store.saveCurrentRun(run); showGame();
+  clock.pause(tutorial ? 'tutorial' : 'user'); store.saveCurrentRun(run); showGame(); applyHighlight();
 }
 
 // ---------- Events ----------
@@ -158,6 +197,9 @@ document.addEventListener('click', (e) => {
   if (t.matches('[data-newrun]')) { showLine(); return; }
   if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); return; }
   if (t.dataset.line) { newRun(t.dataset.line); return; }
+  if (t.matches('[data-tut-next]')) { run = tutorialNext(run); afterChange(); return; }
+  if (t.matches('[data-tut-skip]')) { run = tutorialSkipFix(run); afterChange(); return; }
+  if (t.dataset.navTab !== undefined) { navigate(t.dataset.navTab, t.dataset.navTarget); return; }
   if (t.matches('[data-chat-toggle]')) { ui.chatOpen = !ui.chatOpen; document.getElementById('chatbox').classList.toggle('open', ui.chatOpen);
     t.querySelector('span').textContent = fmt(ui.chatOpen ? 'ui.chat.close' : 'ui.chat.open'); return; }
   if (!run || view !== 'game') return;
@@ -184,6 +226,7 @@ document.addEventListener('click', (e) => {
     doAct({ type: 'versions', uid: t.dataset.uid, high: v('vhigh'), low: v('vlow') }); if (ui.drafts) delete ui.drafts[t.dataset.uid]; }
 });
 document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-replay]')) { store.setReplayTutorial(e.target.checked); return; }
   if (e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { commitInput(e.target); setTimeout(() => renderDash(true, false), 0); }
   else if (e.target.matches('[data-input^="vhigh:"], [data-input^="vlow:"]')) saveDraft(e.target);
 });

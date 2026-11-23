@@ -25,7 +25,7 @@ export const T = {
   'ui.month': 'Mes {m} de 36', 'ui.cash': 'Caja', 'ui.valuation': 'Valuación', 'ui.target': 'Meta IPO {$target}',
   'ui.play': 'Continuar', 'ui.pause': 'Pausa', 'ui.speed1': '1×', 'ui.speed2': '2×',
   'ui.paused.hidden': 'Pausado porque cambiaste de pestaña.', 'ui.paused.event': 'Pausado: tu CFO tiene algo que decirte.',
-  'ui.paused.question': 'Pausado: responde la pregunta de tu CFO.', 'ui.paused.resume': 'Tienes una empresa en marcha. El juego está en pausa: continúa cuando quieras.', 'ui.paused.user': 'En pausa.',
+  'ui.paused.question': 'Pausado: responde la pregunta de tu CFO.', 'ui.paused.tutorial': 'Pausado: sigue las instrucciones de tu CFO en el chat.', 'ui.paused.resume': 'Tienes una empresa en marcha. El juego está en pausa: continúa cuando quieras.', 'ui.paused.user': 'En pausa.',
   'ui.tab.finanzas': 'Finanzas', 'ui.tab.mercado': 'Mercado', 'ui.tab.costos': 'Costos', 'ui.tab.productos': 'Productos', 'ui.tab.valuacion': 'Valuación',
   'ui.chat': 'Tu CFO', 'ui.chat.open': 'Abrir chat', 'ui.chat.close': 'Cerrar chat', 'ui.skip': 'Tocar para terminar de leer',
   'ui.manual': 'Manual del CFO', 'ui.gallery': 'Finales', 'ui.close': 'Cerrar',

@@ -14,12 +14,13 @@ export function welcomeScreen(id = {}, error = '') {
     ${card({ title: 'Calificación', body: `<div class="grading">${esc(gradingIntro())}</div>` })}</main>`;
 }
 
-export function lineScreen(firm) {
+export function lineScreen(firm, { tutorialDone = false, replay = false } = {}) {
   const opt = (line) => `<section class="card line-card"><h3>${esc(fmt(`ui.line.${line}`))}</h3>${richText(fmt(`ui.line.${line}.body`))}
     ${button({ label: fmt('ui.line.choose'), attrs: `data-line="${line}"` })}</section>`;
   return `<main class="screen"><h1>${esc(firm)}</h1>
     <p class="lede">Soy ${esc(CFO_NAME)} (${esc(cfoLong())}), tu director de finanzas. Antes de tostar una sola galleta, necesito que elijas qué clase de empresa vamos a ser. Es una decisión que se puede corregir después, pero cuesta. Mucho.</p>
-    <div class="lines">${opt('premium')}${opt('generico')}</div></main>`;
+    <div class="lines">${opt('premium')}${opt('generico')}</div>
+    ${tutorialDone ? `<label class="field" style="flex-direction:row; align-items:center; gap:8px; margin-top:16px"><input type="checkbox" data-replay ${replay ? 'checked' : ''} style="height:auto"> ${esc(fmt('ui.tutorial.replay'))}</label>` : ''}</main>`;
 }
 
 export function endingDialog(run, gallery, sendStatus) {

@@ -25,12 +25,12 @@ export function richText(text) {
 export const richInline = (text) => richText(text).replace(/^<p>|<\/p>$/g, '');
 
 export const tabs = ({ items, active }) =>
-  `<div class="tabs" role="tablist">${items.map((t) => `<button role="tab" class="tab${t.id === active ? ' active' : ''}" aria-selected="${t.id === active}" data-tab="${esc(t.id)}">${esc(t.label)}</button>`).join('')}</div>`;
+  `<div class="tabs" role="tablist" data-tour="tabs">${items.map((t) => `<button role="tab" class="tab${t.id === active ? ' active' : ''}" aria-selected="${t.id === active}" data-tab="${esc(t.id)}" data-tour="tab:${esc(t.id)}">${esc(t.label)}</button>`).join('')}</div>`;
 
 export const card = ({ title = '', body = '', cls = '' }) => `<section class="card ${cls}">${title ? `<h3 class="card-title">${title}</h3>` : ''}${body}</section>`;
 
 export const stepper = ({ id, value, min = 0, max = 1e9, step = 1, label, prefix = '$' }) =>
-  `<label class="stepper"><span class="stepper-label">${label}</span><span class="stepper-row">
+  `<label class="stepper" data-tour="${esc(id)}"><span class="stepper-label">${label}</span><span class="stepper-row">
     <button class="btn btn-outline btn-icon" data-stepdown="${esc(id)}" data-step="${step}" aria-label="Bajar">−</button>
     <span class="stepper-input">${esc(prefix)}<input inputmode="numeric" data-input="${esc(id)}" value="${esc(value)}" data-min="${min}" data-max="${max}"></span>
     <button class="btn btn-outline btn-icon" data-stepup="${esc(id)}" data-step="${step}" aria-label="Subir">+</button></span></label>`;
