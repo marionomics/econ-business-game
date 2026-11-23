@@ -1,5 +1,5 @@
 // localStorage wrappers. Every call survives a missing or throwing store.
-const K = { identity: 'ipo.identity', runNo: 'ipo.runNumber', run: 'ipo.currentRun', gallery: 'ipo.gallery', queue: 'ipo.queue' };
+const K = { identity: 'ipo2.identity', runNo: 'ipo2.runNumber', run: 'ipo2.currentRun', gallery: 'ipo2.gallery', queue: 'ipo2.queue' };
 const def = () => globalThis.localStorage;
 
 function read(key, fallback, store) {

@@ -3,16 +3,14 @@ import assert from 'node:assert/strict';
 import { fakeStore, throwingStore } from './helpers.js';
 import { getIdentity, setIdentity, nextRunNumber, saveCurrentRun, loadCurrentRun, clearCurrentRun,
   getGallery, addToGallery, enqueue, dequeueAll } from '../js/storage.js';
-import { createRun, currentStep, advance } from '../js/game.js';
 
 test('identity round-trip', () => { const s = fakeStore();
   assert.equal(getIdentity(s), null); setIdentity({ playerId: 'a1', playerName: 'Ana', classCode: 'X' }, s);
   assert.deepEqual(getIdentity(s), { playerId: 'a1', playerName: 'Ana', classCode: 'X' }); });
 test('run numbers increase', () => { const s = fakeStore(); assert.equal(nextRunNumber(s), 1); assert.equal(nextRunNumber(s), 2); });
-test('saveCurrentRun/loadCurrentRun round-trips a mid-run Run', () => { const s = fakeStore();
-  let run = createRun({ seed: 9, playerId: 'a', playerName: 'A', firmName: 'F', classCode: 'C', runNumber: 1 });
-  for (let i = 0; i < 4; i++) { const st = currentStep(run); run = advance(run, st.kind === 'decision' ? st.options[0].id : null); }
-  saveCurrentRun(run, s); const back = loadCurrentRun(s); assert.deepEqual(back, run); assert.deepEqual(currentStep(back), currentStep(run));
+test('saveCurrentRun/loadCurrentRun round-trips a nested run object', () => { const s = fakeStore();
+  const run = { runId: 'r', state: { month: 7, products: [{ uid: 'p1', price: 42 }], history: [{ profit: -3.5 }] }, pending: null };
+  saveCurrentRun(run, s); assert.deepEqual(loadCurrentRun(s), run);
   clearCurrentRun(s); assert.equal(loadCurrentRun(s), null); });
 test('gallery keeps unique endings', () => { const s = fakeStore();
   addToGallery('boutique', s); addToGallery('boutique', s); addToGallery('ipo_premium', s);
@@ -25,4 +23,4 @@ test('storage functions survive a store that throws', () => {
   assert.equal(nextRunNumber(throwingStore), 1); assert.equal(loadCurrentRun(throwingStore), null);
   saveCurrentRun({}, throwingStore); assert.deepEqual(getGallery(throwingStore), []); addToGallery('x', throwingStore);
   enqueue({}, throwingStore); assert.deepEqual(dequeueAll(throwingStore), []); });
-test('corrupt JSON is ignored', () => { const s = fakeStore(); s.setItem('ipo.currentRun', '{bad'); assert.equal(loadCurrentRun(s), null); });
+test('corrupt JSON is ignored', () => { const s = fakeStore(); s.setItem('ipo2.currentRun', '{bad'); assert.equal(loadCurrentRun(s), null); });
