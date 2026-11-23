@@ -37,17 +37,25 @@ function showGame() {
   renderTop(); renderDash();
   if (run.state.ended) showEnding();
 }
-const renderTop = () => { const el = document.getElementById('top'); if (el) el.innerHTML = renderTopbar(run, ui, clock); };
-function renderDash(force = false) {
+// Re-rendering between pointerdown and pointerup replaces the element under the cursor and the browser drops the click,
+// so renders requested while a pointer is down wait until it is released.
+let pointerDown = false; const deferred = new Set();
+document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
+document.addEventListener('pointerup', () => { pointerDown = false;
+  setTimeout(() => { if (deferred.has('top')) renderTop(); if (deferred.has('dash')) renderDash(true, false); deferred.clear(); }, 0); }, true);
+const renderTop = () => { if (pointerDown) { deferred.add('top'); return; } const el = document.getElementById('top'); if (el) el.innerHTML = renderTopbar(run, ui, clock); };
+function renderDash(force = false, cooldown = true) {
   const el = document.getElementById('dash'); if (!el) return;
+  if (pointerDown) { deferred.add('dash'); return; }
   if (!force && el.contains(document.activeElement) && document.activeElement.matches('input')) return; // don't steal focus while typing
-  el.innerHTML = renderDashboard(run, ui); renderedAt = performance.now();
+  el.innerHTML = renderDashboard(run, ui); if (cooldown) renderedAt = performance.now();
 }
 
 // ---------- Chat ----------
 function toChat(m) {
   const d = describeMessage(m, run);
   return { seq: m.seq, month: m.month, type: m.type, tone: d.tone, text: d.text, question: d.question, feedback: d.feedback,
+    urgent: m.type === 'question' || d.tone === 'ending',
     chartSvg: d.chart ? messageChart(d.chart.kind, run) : '' };
 }
 function renderMessage(msg) {
@@ -70,6 +78,12 @@ function refreshQuestionMessages() {
   for (const m of run.inbox.filter((x) => x.type === 'question')) { const el = document.getElementById(`msg-${m.seq}`); if (el) el.outerHTML = renderMessage(toChat(m)); }
 }
 
+function openChat() {
+  if (ui.chatOpen) return; ui.chatOpen = true;
+  document.getElementById('chatbox')?.classList.add('open');
+  const span = document.querySelector('[data-chat-toggle] span'); if (span) span.textContent = fmt('ui.chat.close');
+}
+
 // ---------- Game flow ----------
 function save() { if (run && !run.state.ended) store.saveCurrentRun(run); }
 function afterChange() {
@@ -77,6 +91,7 @@ function afterChange() {
   const reasons = pauseReasons(run);
   if (reasons.includes('ended')) clock.pause('ended');
   else if (reasons.includes('question')) clock.pause('question');
+  if (reasons.includes('question') || (reasons.includes('event') && clock.paused)) openChat(); // on phones the chat is a drawer
   save(); renderTop(); renderDash();
   if (run.state.ended) showEnding();
 }
@@ -94,6 +109,7 @@ function doAnswer(value) {
   const before = run.questions.length;
   run = answer(run, value);
   refreshQuestionMessages();
+  if (run.pending === null && clock.paused && clock.reason === 'question') clock.reason = 'user'; // answered: now just paused
   if (run.questions.length > before || run.pending === null) afterChange(); else renderTop();
 }
 function showEnding() {
@@ -114,6 +130,10 @@ function newRun(line) {
 }
 
 // ---------- Events ----------
+function saveDraft(input) {
+  const [kind, uid] = input.dataset.input.split(':'); ui.drafts ??= {}; ui.drafts[uid] ??= {};
+  ui.drafts[uid][kind === 'vhigh' ? 'high' : 'low'] = input.value;
+}
 function commitInput(input) {
   const [kind, uid] = input.dataset.input.split(':');
   if (kind === 'price') doAct({ type: 'setPrice', uid, price: input.value });
@@ -136,12 +156,13 @@ document.addEventListener('click', (e) => {
   if (t.matches('[data-close-dialog]')) { document.getElementById('overlay').innerHTML = ''; return; }
   if (t.dataset.dialog) { document.getElementById('overlay').innerHTML = t.dataset.dialog === 'manual' ? manualDialog() : galleryDialog(store.getGallery()); return; }
   if (t.matches('[data-newrun]')) { showLine(); return; }
+  if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); return; }
   if (t.dataset.line) { newRun(t.dataset.line); return; }
   if (t.matches('[data-chat-toggle]')) { ui.chatOpen = !ui.chatOpen; document.getElementById('chatbox').classList.toggle('open', ui.chatOpen);
     t.querySelector('span').textContent = fmt(ui.chatOpen ? 'ui.chat.close' : 'ui.chat.open'); return; }
   if (!run || view !== 'game') return;
   const guarded = t.dataset.act || t.dataset.answer || t.dataset.clock;
-  if (guarded && !acceptClick(e, performance.now(), renderedAt)) return;
+  if (guarded && !acceptClick(e, performance.now(), renderedAt, { cooldown: !t.dataset.clock })) return;
   if (t.dataset.clock === 'play') return play();
   if (t.dataset.clock === 'pause') { clock.pause('user'); renderTop(); return; }
   if (t.dataset.speed) { const sp = Number(t.dataset.speed); if (clock.paused) clock.speed = sp; else clock.play(sp); renderTop(); return; }
@@ -152,7 +173,7 @@ document.addEventListener('click', (e) => {
     const id = t.dataset.stepup || t.dataset.stepdown, input = document.querySelector(`[data-input="${CSS.escape(id)}"]`);
     const v = (Number(input.value) || 0) + (t.dataset.stepup ? 1 : -1) * Number(t.dataset.step || 1);
     input.value = Math.max(Number(input.dataset.min), Math.min(Number(input.dataset.max), v));
-    if (!id.startsWith('v')) commitInput(input); return;
+    if (id.startsWith('v')) saveDraft(input); else commitInput(input); return;
   }
   const a = t.dataset.act;
   if (a === 'launch') doAct({ type: 'launch', templateId: t.dataset.template });
@@ -160,9 +181,12 @@ document.addEventListener('click', (e) => {
   if (a === 'expand') doAct({ type: 'expand' });
   if (a === 'reposition') doAct({ type: 'reposition' });
   if (a === 'versions') { const v = (k) => document.querySelector(`[data-input="${k}:${CSS.escape(t.dataset.uid)}"]`)?.value;
-    doAct({ type: 'versions', uid: t.dataset.uid, high: v('vhigh'), low: v('vlow') }); }
+    doAct({ type: 'versions', uid: t.dataset.uid, high: v('vhigh'), low: v('vlow') }); if (ui.drafts) delete ui.drafts[t.dataset.uid]; }
 });
-document.addEventListener('change', (e) => { if (e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { commitInput(e.target); renderDash(true); } });
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { commitInput(e.target); setTimeout(() => renderDash(true, false), 0); }
+  else if (e.target.matches('[data-input^="vhigh:"], [data-input^="vlow:"]')) saveDraft(e.target);
+});
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closePopover(); if (document.querySelector('.dialog') && !document.querySelector('[data-newrun]')) document.getElementById('overlay').innerHTML = ''; }
   if (e.key === 'Enter' && e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { e.preventDefault(); commitInput(e.target); renderDash(true); }

@@ -9,10 +9,10 @@ const launched = () => { const s0 = initialState(w); return applyAction(s0, w, {
 
 test('initial state', () => { const s = initialState(w); assert.equal(s.cash, w.startCash); assert.equal(s.month, 0); assert.deepEqual(s.products, []);
   assert.deepEqual(JSON.parse(JSON.stringify(s)), s); });
-test('launch charges the cost, copies the template and starts at its optimal price', () => {
+test('launch charges the cost, copies the template and starts at a neutral price (80% of a0, above cost)', () => {
   const s0 = initialState(w); const t = w.templates[0]; const r = applyAction(s0, w, { type: 'launch', templateId: t.id });
   assert.ok(r.ok); const p = r.state.products[0];
-  assert.equal(r.state.cash, w.startCash - t.launchCost); assert.equal(p.a0, t.a0); assert.equal(p.price, Math.round((t.a0 + t.cProd) / 2));
+  assert.equal(r.state.cash, w.startCash - t.launchCost); assert.equal(p.a0, t.a0); assert.equal(p.price, Math.max(t.cProd + 1, Math.round(0.8 * t.a0)));
   assert.equal(p.readyAt, t.devMonths); assert.equal(p.ad, 0); assert.ok(p.active); });
 test('applyAction is pure', () => { const s = launched(); const copy = structuredClone(s);
   applyAction(s, w, { type: 'setPrice', uid: s.products[0].uid, price: 90 }); assert.deepEqual(s, copy); });

@@ -6,6 +6,7 @@ const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 export const number = (n) => (n < 0 ? '−' : '') + nf.format(Math.abs(n));
 export const money = (n) => (n < 0 ? '−$' : '$') + nf.format(Math.round(Math.abs(n)));
 export const pct = (x) => `${Math.round(x * 100)}%`;
+export const slope = (b) => String(Number(Number(b).toPrecision(3))); // demand slopes are small: keep significant digits
 
 export const CFO_NAME = 'M.A.R.G.E.N.';
 export const CFO_LONG = 'Módulo Automatizado de Rentabilidad, Gestión y Evaluación Numérica';
@@ -74,6 +75,7 @@ export const T = {
   'act.noTemplate': 'Esa receta no corresponde a nuestra estrategia actual.',
   'act.ended': 'La partida terminó. Ya no hay nada que decidir. Qué alivio, ¿no?',
   'act.unknown': 'No entendí esa orden.',
+  'act.adTooHigh': 'Esa publicidad mensual es mayor que toda nuestra caja. Si de verdad quieres quebrar el mes que entra, hay formas más elegantes.',
 
   // ---------- Eventos ----------
   'ev.wildcard.arancel': 'Noticia: el gobierno impuso un [[arancel]] a los insumos importados. Cada caja nos cuesta {$tariff} más. Tu [[costo_marginal|costo marginal]] subió. Mira la gráfica: la línea de costo se movió hacia arriba. Algo me dice que el precio óptimo también. Calcula cuánto.',

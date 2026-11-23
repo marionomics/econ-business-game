@@ -23,7 +23,9 @@ function sell(p, s, world) {
   contribution = revenue - c * Q;
   const sp = surplus(d, P, c);
   const potential = quantityAt(d, P);
-  return { uid: p.uid, P: p.price, versions: p.versions, Q, a: d.a, b: d.b, c, revenue, contribution,
+  // Reported price = what customers actually paid on average (with editions, the single price is unused).
+  const reported = p.versions ? (Q > 0 ? Math.round(revenue / Q) : p.versions.low) : p.price;
+  return { uid: p.uid, P: reported, versions: p.versions, Q, a: d.a, b: d.b, c, revenue, contribution,
     cs: sp.cs, ps: contribution, dwl: sp.dwl, share: potential > 0 ? Q / potential : 1, elasticity: elasticityAt(d, P), rivalPrice: R };
 }
 

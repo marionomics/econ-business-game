@@ -18,6 +18,7 @@ function focus(run, uid) {
   return selling.reduce((best, p) => (q(p) > q(best) ? p : best));
 }
 const dem = (run, p) => productDemand(p, run.state, run.world);
+const px = (p) => (p.versions ? p.versions.low : p.price); // with editions, the basic edition is the price on the demand curve
 const cost = (run, p) => productCost(p, run.state, run.world);
 const hasProduct = (run, ctx) => !!focus(run, ctx.uid);
 
@@ -26,7 +27,7 @@ export const QUESTIONS = [
     build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, c = cost(run, p);
       return num((a + c) / 2, { uid: p.uid, a, c }); } },
   { id: 'utilidad_mes', trigger: 'launch', applies: hasProduct,
-    build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const d = dem(run, p), c = cost(run, p), P = p.price, Q = quantityAt(d, P);
+    build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const d = dem(run, p), c = cost(run, p), P = px(p), Q = quantityAt(d, P);
       return num((P - c) * Q, { uid: p.uid, P, Q, c }); } },
   { id: 'arancel_precio', trigger: 'wildcard:arancel', applies: hasProduct,
     build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, c = cost(run, p), t = run.world.tariff;
@@ -36,20 +37,20 @@ export const QUESTIONS = [
   { id: 'renta_precio', trigger: 'wildcard:renta', applies: () => true,
     build: (run, rng) => mc(DIR4, 'igual', { rent: run.world.rent }, rng) },
   { id: 'renta_utilidad', trigger: 'wildcard:renta', applies: (run) => run.state.history.length > 0,
-    build: (run) => { const last = run.state.history.at(-1).profit; return num(last - run.world.rent, { lastProfit: last + run.world.rent, rent: run.world.rent }); } },
+    build: (run) => { const last = run.state.history.at(-1).profit; return num(last, { lastProfit: last + run.world.rent, rent: run.world.rent }); } }, // the shown profit already includes the rent
   ...['salud', 'recesion', 'marca_blanca'].flatMap((id) => [
     { id: 'demanda_precio', trigger: `wildcard:${id}`, applies: hasProduct,
       build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, c = cost(run, p); return num((a + c) / 2, { uid: p.uid, a, c, shock: id }); } },
-    { id: 'demanda_ingreso', trigger: `wildcard:${id}`, applies: (run, ctx) => { const p = focus(run, ctx.uid); return !!p && dem(run, p).a > p.price; },
-      build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, P = p.price; const eps = P / (a - P);
+    { id: 'demanda_ingreso', trigger: `wildcard:${id}`, applies: (run, ctx) => { const p = focus(run, ctx.uid); return !!p && dem(run, p).a > px(p); },
+      build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const a = dem(run, p).a, P = px(p); const eps = P / (a - P);
         return mc(['elastica', 'inelastica'], eps > 1 ? 'elastica' : 'inelastica', { uid: p.uid, a, P, shock: id }, rng); } },
   ]),
   { id: 'rival_lealtad', trigger: 'rivalArrives', applies: () => true,
     build: (run, rng) => mc(['protege', 'nada', 'costos', 'precio_bajo'], 'protege', {}, rng) },
   { id: 'rival_elasticidad', trigger: 'rivalArrives', applies: () => true,
     build: (run, rng) => mc(['sube', 'baja', 'igual'], 'baja', {}, rng) },
-  { id: 'pie_calculo', trigger: 'investigation', applies: (run, ctx) => { const p = focus(run, ctx.uid); return !!p && p.price > cost(run, p); },
-    build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const d = dem(run, p), c = cost(run, p), P = p.price;
+  { id: 'pie_calculo', trigger: 'investigation', applies: (run, ctx) => { const p = focus(run, ctx.uid); return !!p && px(p) > cost(run, p); },
+    build: (run, rng, ctx) => { const p = focus(run, ctx.uid); const d = dem(run, p), c = cost(run, p), P = px(p);
       const Q = quantityAt(d, P), Qc = quantityAt(d, c); return num(0.5 * (Qc - Q) * (P - c), { uid: p.uid, P, Q, c, Qc }); } },
   { id: 'pie_concepto', trigger: 'investigation', applies: () => true,
     build: (run, rng) => mc(['precio_sobre_cmg', 'costo_fijo', 'impuestos', 'publicidad'], 'precio_sobre_cmg', {}, rng) },
@@ -61,10 +62,10 @@ export const QUESTIONS = [
     build: (run, rng) => mc(['fijo_repartido', 'cmg_sube', 'precio_sube', 'nada'], 'fijo_repartido', {}, rng) },
   { id: 'discriminacion', trigger: 'versions', applies: () => true,
     build: (run, rng) => mc(['captura_excedente', 'baja_costos', 'quita_rival', 'nada'], 'captura_excedente', {}, rng) },
-  { id: 'elasticidad', trigger: 'pulse', applies: (run) => { const p = focus(run, null); return !!p && dem(run, p).a > p.price; },
-    build: (run) => { const p = focus(run, null); const a = dem(run, p).a, P = p.price; return num(r2(P / (a - P)), { uid: p.uid, a, P }, { absolute: true }); } },
+  { id: 'elasticidad', trigger: 'pulse', applies: (run) => { const p = focus(run, null); return !!p && dem(run, p).a > px(p); },
+    build: (run) => { const p = focus(run, null); const a = dem(run, p).a, P = px(p); return num(r2(P / (a - P)), { uid: p.uid, a, P }, { absolute: true }); } },
   { id: 'markup', trigger: 'pulse', applies: (run) => !!focus(run, null),
-    build: (run) => { const p = focus(run, null); const c = cost(run, p), P = p.price; return num(r2((P - c) / P), { uid: p.uid, P, c }); } },
+    build: (run) => { const p = focus(run, null); const c = cost(run, p), P = px(p); return num(r2((P - c) / P), { uid: p.uid, P, c }, { percentOk: true }); } },
 ];
 
 // Pick one applicable question for a trigger (or null).

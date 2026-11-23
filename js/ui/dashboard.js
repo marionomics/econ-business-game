@@ -2,7 +2,7 @@
 import { esc, icon } from './dom.js';
 import { button, tabs, card, stepper, infoButton, richInline } from './components.js';
 import { lineChart, demandChart, isoprofitChart, costChart } from './charts.js';
-import { fmt, money, number, pct, T, TEMPLATE_NAMES } from '../content/copy.js';
+import { fmt, money, number, pct, slope, T, TEMPLATE_NAMES } from '../content/copy.js';
 import { productDemand, productCost, surplus } from '../sim/market.js';
 import { valuation, sustained } from '../sim/valuation.js';
 import { launchableTemplates } from '../sim/actions.js';
@@ -28,7 +28,8 @@ export function renderTopbar(run, ui, clock) {
   return `<header class="topbar"><div class="topbar-in">
     <div class="brand"><span>${esc(run.meta.firmName ?? T['ui.title'])}</span><small>${esc(fmt('ui.month', { m: s.month }))} · ${esc(fmt(`ui.line.${s.line}`))}</small></div>
     <div class="clockctl">
-      ${button({ label: playing ? fmt('ui.pause') : fmt('ui.play'), variant: playing ? 'outline' : 'default', size: 'sm', ico: playing ? 'pause' : 'play', attrs: `data-clock="${playing ? 'pause' : 'play'}"${s.ended ? ' disabled' : ''}` })}
+      ${s.ended ? button({ label: 'Ver final', variant: 'outline', size: 'sm', attrs: 'data-show-ending' }) + button({ label: fmt('ui.end.new'), size: 'sm', attrs: 'data-newrun' })
+        : button({ label: playing ? fmt('ui.pause') : fmt('ui.play'), variant: playing ? 'outline' : 'default', size: 'sm', ico: playing ? 'pause' : 'play', attrs: `data-clock="${playing ? 'pause' : 'play'}"` })}
       ${button({ label: fmt('ui.speed1'), variant: 'ghost', size: 'sm', attrs: `data-speed="1" aria-pressed="${clock.speed === 1}"` })}
       ${button({ label: fmt('ui.speed2'), variant: 'ghost', size: 'sm', attrs: `data-speed="2" aria-pressed="${clock.speed === 2}"` })}
     </div>
@@ -88,7 +89,7 @@ function mercado(run, ui) {
   const rival = s.rival.active ? money(s.rival.prices[p.uid] ?? 0) : fmt('ui.mkt.norival');
   const eps = d.a > p.price ? p.price / (d.a - p.price) : null;
   const stats = [[L('ui.mkt.share') + ' ' + infoButton('lealtad'), row && !row.inDevelopment ? pct(row.share) : '—'], [esc(fmt('ui.mkt.rival')) + ' ' + infoButton('competencia'), esc(rival)],
-    [L('ui.mkt.elasticity'), eps === null ? '—' : number(Math.round(eps * 100) / 100)], ['Demanda', `P = ${number(d.a)} − ${number(d.b)}·Q`],
+    [L('ui.mkt.elasticity'), eps === null ? '—' : number(Math.round(eps * 100) / 100)], ['Demanda', `P = ${number(d.a)} − ${slope(d.b)}·Q`],
     [L('ui.mkt.cs'), money(sp.cs)], [L('ui.mkt.ps'), money(sp.ps)], [L('ui.mkt.dwl'), money(sp.dwl)]];
   return productPicker(run, ui) + `<div class="grid2">${card({ title: L('ui.mkt.title', { product: nameOf(p) }), body: `<div class="chart">${chart}</div>${legend}` })}
     ${card({ body: stats.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${typeof v === 'string' && v.startsWith('<') ? v : esc(v)}</b></div>`).join('') })}</div>`;
@@ -107,19 +108,19 @@ function costos(run, ui) {
     + card({ body: `<p class="muted">El costo fijo mostrado es la parte de la planta que le toca a este producto más su gasto propio.</p>` });
 }
 
-function productos(run) {
+function productos(run, ui) {
   const s = run.state, w = run.world;
   const list = active(s).map((p) => {
     const dev = s.month <= p.readyAt;
     const { d, c } = productNow(run, p);
     const versions = s.month >= w.versionsUnlockMonth
-      ? `<div class="controls">${stepper({ id: `vhigh:${p.uid}`, value: p.versions?.high ?? Math.round((2 * d.a + c) / 3), min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.high')) })}
-         ${stepper({ id: `vlow:${p.uid}`, value: p.versions?.low ?? Math.round((d.a + 2 * c) / 3), min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.low')) })}</div>
+      ? `<div class="controls">${stepper({ id: `vhigh:${p.uid}`, value: ui.drafts?.[p.uid]?.high ?? p.versions?.high ?? Math.round((2 * d.a + c) / 3), min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.high')) })}
+         ${stepper({ id: `vlow:${p.uid}`, value: ui.drafts?.[p.uid]?.low ?? p.versions?.low ?? Math.round((d.a + 2 * c) / 3), min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.low')) })}</div>
          ${button({ label: p.versions ? 'Actualizar ediciones' : fmt('ui.prod.versions').replace(/\[\[(\w+)\|([^\]]*)\]\]/g, '$2') + ` (${money(w.versionsCost)})`, variant: 'outline', size: 'sm', attrs: `data-act="versions" data-uid="${esc(p.uid)}"` })} ${infoButton('discriminacion_precios')}`
       : `<p class="muted">${esc(fmt('ui.prod.versionsLocked', { m: w.versionsUnlockMonth }))} ${infoButton('discriminacion_precios')}</p>`;
     return `<div class="product"><div class="product-head"><h4>${esc(nameOf(p))}</h4>
       <span class="muted">${dev ? esc(fmt('ui.prod.dev', { m: p.readyAt + 1 })) : `CMg ${esc(money(c))} · ${L('ui.prod.loyal', { pct: pct(p.loyalty) })}`}</span></div>
-      <div class="controls">${stepper({ id: `price:${p.uid}`, value: p.price, min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.price')) })}
+      <div class="controls">${p.versions ? `<p class="muted">Con ediciones, los precios son los de la edición premium y la básica (abajo).</p>` : stepper({ id: `price:${p.uid}`, value: p.price, min: 1, max: p.a0 * 2, label: esc(fmt('ui.prod.price')) })}
       ${stepper({ id: `ad:${p.uid}`, value: p.ad, min: 0, max: 10 * p.launchCost, step: 1000, label: L('ui.prod.ad') })}</div>
       <div style="margin-top:10px">${versions}</div>
       <div style="margin-top:10px">${button({ label: fmt('ui.prod.discontinue'), variant: 'destructive', size: 'sm', attrs: `data-act="discontinue" data-uid="${esc(p.uid)}"` })}</div></div>`;

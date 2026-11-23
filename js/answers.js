@@ -40,5 +40,6 @@ export function gradeAnswer(built, input) {
   if (Array.isArray(input)) return input.some((x) => gradeAnswer(built, x));
   if (typeof input !== 'number' || !Number.isFinite(input)) return false;
   const x = built.absolute ? Math.abs(input) : input;
+  if (built.percentOk && x > 1 && x <= 100 && gradeAnswer({ ...built, percentOk: false }, x / 100)) return true; // "60" or "60%" for 0.60
   return Math.abs(x - built.answer) <= Math.max(0.02 * Math.abs(built.answer), 0.01);
 }

@@ -116,7 +116,7 @@ const shockIgnorer = (name, kind) => scripted(name, (run) => { const s = run.sta
 export const BANKRUPT_BOTS = {
   quiebra_bajo_costo: scripted('belowCost', (run) => [...launchFirst(run), ...priceAll(run, (p) => Math.max(1, Math.floor(cOf(run, p)) - 4))]),
   quiebra_publicidad: scripted('adBurn', (run) => [...launchFirst(run), ...priceAll(run, optimalPrice(run)),
-    ...run.state.products.filter((p) => p.active).map((p) => ({ type: 'setAd', uid: p.uid, ad: 400000 }))]),
+    ...run.state.products.filter((p) => p.active).map((p) => ({ type: 'setAd', uid: p.uid, ad: Math.max(0, Math.floor(run.state.cash) - 1000) }))]),
   quiebra_expansion: scripted('overExpand', (run) => [...launchableTemplates(run.state, run.world).map((t) => ({ type: 'launch', templateId: t.id })),
     { type: 'expand' }, ...priceAll(run, optimalPrice(run))]),
   quiebra_guerra: scripted('priceWar', (run) => { const s = run.state;

@@ -82,7 +82,7 @@ export function step(input) {
     // Warnings and idle remarks.
     const burn = last && last.profit < 0 ? -last.profit : 0;
     if (burn > 0 && s.cash < 3 * burn && s.month - run.lastRunway >= 3) { run.lastRunway = s.month; say(run, 'runway', { months: Math.max(0, Math.floor(s.cash / burn)) }); }
-    if (last?.perProduct.some((x) => !x.inDevelopment && x.Q > 0 && x.P < x.c)) say(run, 'belowCost', {});
+    if (last?.perProduct.some((x) => !x.inDevelopment && x.Q > 0 && x.P < x.c)) { if (s.month - (run.lastBelowCost ?? -99) >= 3) { run.lastBelowCost = s.month; say(run, 'belowCost', {}); } }
     else if (s.month - run.lastQuip >= 4 && createRng(deriveSeed(run.seed, `quip:${s.month}`)).next() < 0.5) { run.lastQuip = s.month; say(run, 'quip', { n: createRng(deriveSeed(run.seed, `qn:${s.month}`)).int(0, 99) }); }
   }
   compactLog(run);

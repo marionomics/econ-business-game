@@ -5,7 +5,10 @@ export const typedPrefix = (text, elapsedMs, cps) => text.slice(0, Math.max(0, M
 export function createTypingQueue({ cps = 40, reducedMotion = false } = {}) {
   const queue = [], done = []; let current = null; let finished = false;
   return {
-    push(msg) { queue.push(msg); },
+    push(msg) {
+      if (msg.urgent) { if (current) { done.push(current.msg); current = null; finished = false; } while (queue.length) done.push(queue.shift()); }
+      queue.push(msg);
+    },
     skip() { if (current) finished = true; },
     update(now) {
       if (reducedMotion) { if (current) done.push(current.msg); current = null; while (queue.length) done.push(queue.shift()); return { done, current: null, busy: false }; }

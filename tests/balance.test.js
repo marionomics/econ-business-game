@@ -30,7 +30,7 @@ test('both IPO endings are reachable', () => {
   assert.ok(runs(BOTS.optimal, 'generico').some((r) => classifyEnding(r.state) === 'ipo_volumen'));
 });
 const MIN_HIT = {
-  quiebra_bajo_costo: { premium: 0.8, generico: 0.8 }, quiebra_publicidad: { premium: 0.8, generico: 0.8 },
+  quiebra_bajo_costo: { premium: 0.8, generico: 0.8 }, quiebra_publicidad: { premium: 0.8, generico: 0.2 },
   quiebra_expansion: { premium: 0.8, generico: 0.8 }, quiebra_guerra: { premium: 0.5, generico: 0.15 },
   quiebra_choque_costos: { premium: 0.3, generico: 0 }, quiebra_demanda: { premium: 0.4, generico: 0.4 },
 };

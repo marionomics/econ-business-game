@@ -1,9 +1,11 @@
 // Player actions, validated. Pure: returns { state, ok, reason? } (reason is a copy key).
 import { productCost } from './market.js';
+import { parseNumber } from '../answers.js';
 
 const toNumber = (v) => {
-  if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return NaN;
-  return Number(v);
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return NaN;
+  return parseNumber(v) ?? NaN; // accepts "50,000", "$120", "1.250,5"
 };
 const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.round(v)));
 
@@ -27,7 +29,9 @@ export function applyAction(input, world, action) {
     case 'setAd': {
       const p = findProduct(); if (!p) return fail('act.noProduct');
       const v = toNumber(action.ad); if (!Number.isFinite(v)) return fail('act.badNumber');
-      p.ad = clampInt(v, 0, 10 * p.launchCost); return { state: s, ok: true };
+      const ad = clampInt(v, 0, 10 * p.launchCost);
+      if (ad > p.ad && ad > s.cash) return fail('act.adTooHigh'); // a monthly spend above the cash in hand is a typo or a bankruptcy
+      p.ad = ad; return { state: s, ok: true };
     }
     case 'launch': {
       if (s.repositioning) return fail('act.repositioning');
@@ -36,7 +40,7 @@ export function applyAction(input, world, action) {
       const p = { ...t, templateId: t.id, uid: 'p' + s.nextUid++, ad: 0, adStock: 0, loyalty: 0,
         readyAt: s.month + t.devMonths, launchedAt: s.month, active: true, versions: null };
       delete p.id;
-      p.price = Math.round((t.a0 + productCost(p, s, world)) / 2);
+      p.price = Math.max(Math.ceil(productCost(p, s, world)) + 1, Math.round(0.8 * t.a0)); // neutral start: finding the optimum is the student's job
       s.products.push(p);
       return { state: s, ok: true };
     }
