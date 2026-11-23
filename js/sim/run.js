@@ -8,6 +8,7 @@ import { buildFor } from './questions.js';
 import { scoreRun } from './score.js';
 import { parseNumber, parseNumberCandidates, gradeAnswer } from '../answers.js';
 import { say } from './inbox.js';
+import { diagnose, crisisNav, rejectionVars } from './diagnose.js';
 import { initCoach, coachAfterAct, coachAfterStep } from './coach.js';
 import { initTutorial, tutorialPaused, tutorialBlocksAction, tutorialAfterAct, tutorialAfterStep, tutorialAfterAnswer } from './tutorial.js';
 
@@ -54,7 +55,7 @@ export function act(input, action) {
   const blocked = tutorialBlocksAction(run, action);
   if (blocked) { say(run, 'rejected', { reason: blocked, action: action.type }); return run; }
   const r = applyAction(run.state, run.world, action);
-  if (!r.ok) { say(run, 'rejected', { reason: r.reason, action: action.type }); return run; }
+  if (!r.ok) { say(run, 'rejected', { reason: r.reason, action: action.type, ...rejectionVars(run, action, r.reason) }); return run; }
   run.state = r.state;
   run.log.actions.push({ m: run.state.month, t: action.type, ...(action.templateId ? { id: action.templateId } : {}) });
   const suppressLaunchQuestion = tutorialAfterAct(run, action);
@@ -73,6 +74,9 @@ export function step(input) {
   const s = state, last = s.history.at(-1);
   run.log.months.push({ m: s.month, p: s.products.filter((p) => p.active).map((p) => [p.uid, p.price, p.ad]) });
   for (const e of events) {
+    if (e.type === 'crisisResolved' && !e.survived) e.nav = crisisNav(e.id);
+    if (e.type === 'investigation') Object.assign(e, { threshold: run.world.regulator.markupThreshold, monthsLeft: run.world.regulator.deadlineMonths, nav: [{ tab: 'mercado', target: 'demand-chart' }, { tab: 'productos' }] });
+    if (e.type === 'fine') e.nav = [{ tab: 'productos' }];
     say(run, e.type, e);
     run.log.events.push({ m: s.month, t: e.type, ...(e.id ? { id: e.id } : {}) });
     if (e.type === 'wildcard') trigger(run, `wildcard:${e.id}`, {}, `wildcard:${e.id}`);
@@ -83,8 +87,8 @@ export function step(input) {
     if (PULSE_MONTHS.includes(s.month) && shownCount(run) + run.queue.length < MIN_QUESTIONS) trigger(run, 'pulse', {}, `pulse:${s.month}`);
     // Warnings and idle remarks.
     const burn = last && last.profit < 0 ? -last.profit : 0;
-    if (burn > 0 && s.cash < 3 * burn && s.month - run.lastRunway >= 3) { run.lastRunway = s.month; say(run, 'runway', { months: Math.max(0, Math.floor(s.cash / burn)) }); }
-    if (last?.perProduct.some((x) => !x.inDevelopment && x.Q > 0 && x.P < x.c)) { if (s.month - (run.lastBelowCost ?? -99) >= 3) { run.lastBelowCost = s.month; say(run, 'belowCost', {}); } }
+    if (burn > 0 && s.cash < 3 * burn && s.month - run.lastRunway >= 3) { run.lastRunway = s.month; say(run, 'runway', { months: Math.max(0, Math.floor(s.cash / burn)), ...diagnose(run) }); }
+    if (last?.perProduct.some((x) => !x.inDevelopment && x.Q > 0 && x.P < x.c)) { if (s.month - (run.lastBelowCost ?? -99) >= 3) { run.lastBelowCost = s.month; say(run, 'belowCost', diagnose(run)); } }
     else if (s.month - run.lastQuip >= 4 && createRng(deriveSeed(run.seed, `quip:${s.month}`)).next() < 0.5) { run.lastQuip = s.month; say(run, 'quip', { n: createRng(deriveSeed(run.seed, `qn:${s.month}`)).int(0, 99) }); }
   }
   const ask = tutorialAfterStep(run);
