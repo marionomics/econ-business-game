@@ -2,8 +2,9 @@
 import { classifyEnding } from '../sim/endings.js';
 import { getLocale } from './locale.js';
 import * as es from './copy.es.js';
+import * as en from './copy.en.js';
 
-const PACKS = { es };
+const PACKS = { es, en };
 export const registerLocalePack = (locale, pack) => { PACKS[locale] = pack; };
 const pack = () => PACKS[getLocale()] ?? es;
 const pick = (name, key) => pack()[name]?.[key] ?? es[name][key];

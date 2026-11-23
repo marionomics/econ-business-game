@@ -15,6 +15,7 @@ import * as store from './storage.js';
 import { buildResultRow, sendResult, flushQueue } from './results.js';
 import { APPS_SCRIPT_URL, CLASS_CODES } from './config.js';
 import { classifyEnding } from './sim/endings.js';
+import { setLocale, getLocale, detectLocale } from './content/locale.js';
 
 const app = document.getElementById('app');
 let run = null, view = 'welcome', chat = null, pushedSeq = 0, endingShown = false, sendStatus = null, renderedAt = 0;
@@ -66,7 +67,7 @@ function toChat(m) {
     chartSvg: d.chart ? messageChart(d.chart.kind, run) : '' };
 }
 function renderMessage(msg) {
-  const meta = `<span class="meta">Mes ${msg.month} · ${esc(CFO_NAME)}</span>`;
+  const meta = `<span class="meta">${esc(fmt('ui.chat.meta', { m: msg.month, cfo: CFO_NAME }))}</span>`;
   let inner;
   if (msg.type === 'question') {
     const q = run.questions[msg.question], dq = describeQuestion(q, run), open = !q.answered && run.pending === msg.question;
@@ -163,7 +164,7 @@ const classifyEndingSafe = () => classifyEnding(run.state);
 function newRun(line) {
   const id = store.getIdentity();
   const tutorial = !store.getTutorialDone() || store.getReplayTutorial(); store.setReplayTutorial(false);
-  run = createRun({ seed: newSeed(), line, tutorial, coachSeen: store.getCoachSeen(), meta: { ...id, runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
+  run = createRun({ seed: newSeed(), line, tutorial, coachSeen: store.getCoachSeen(), meta: { ...id, locale: getLocale(), runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
   endingShown = false; sendStatus = null; ui.tab = 'productos'; ui.focus = null;
   clock.pause(tutorial ? 'tutorial' : 'user'); store.saveCurrentRun(run); showGame(); applyHighlight();
 }
@@ -196,6 +197,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.dialog) { document.getElementById('overlay').innerHTML = t.dataset.dialog === 'manual' ? manualDialog() : galleryDialog(store.getGallery()); return; }
   if (t.matches('[data-newrun]')) { showLine(); return; }
   if (t.matches('[data-show-ending]')) { document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); return; }
+  if (t.dataset.lang) { switchLocale(t.dataset.lang); return; }
   if (t.dataset.line) { newRun(t.dataset.line); return; }
   if (t.matches('[data-tut-next]')) { run = tutorialNext(run); afterChange(); return; }
   if (t.matches('[data-tut-skip]')) { run = tutorialSkipFix(run); afterChange(); return; }
@@ -246,7 +248,15 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('visibilitychange', () => { clock.handleVisibility(); if (view === 'game') renderTop(); });
 
+function applyLocale(l) { setLocale(l); document.documentElement.lang = getLocale(); document.title = fmt('ui.title'); }
+function switchLocale(l) {
+  applyLocale(l); store.setLocaleStore(getLocale());
+  if (view === 'welcome') showWelcome(); else if (view === 'line') showLine();
+  else if (view === 'game') { showGame(); if (endingShown) document.getElementById('overlay').innerHTML = endingDialog(run, store.getGallery(), sendStatus); applyHighlight(); } // never re-send
+}
+
 // ---------- Start ----------
+applyLocale(store.getLocaleStore() ?? detectLocale(navigator.language));
 flushQueue(APPS_SCRIPT_URL).catch(() => {});
 run = store.loadCurrentRun();
 if (run && run.state && !run.state.ended) { clock.pause('resume'); showGame(); }

@@ -1,5 +1,6 @@
 // Hand-drawn SVG charts. Colors come from CSS variables of the preset. All functions return SVG strings.
 import { esc } from './dom.js';
+import { fmt } from '../content/copy.js';
 
 const W = 560, H = 300, PAD = { l: 52, r: 14, t: 14, b: 30 };
 const fin = (x) => (Number.isFinite(x) ? x : 0);
@@ -19,14 +20,14 @@ const axes = (s, x0, x1, y0, y1, xl, yl) => `${line(x0, y0, x1, y0, s, 'stroke: 
   + text(s.sx(x1), H - 8, xl, 'end') + text(PAD.l - 6, PAD.t - 2 + 10, yl, 'end', 'opacity:0');
 
 // ---- Line chart (cash, valuation) ----
-export function lineChart({ series, target = null, label, xLabel = 'mes' }) {
+export function lineChart({ series, target = null, label, xLabel = fmt('ui.axis.month') }) {
   const all = series.flatMap((s) => s.points).concat(target ?? []).concat(0);
   let y0 = Math.min(...all), y1 = Math.max(...all); if (y0 === y1) { y1 = y0 + 1; }
   const n = Math.max(2, ...series.map((s) => s.points.length));
   const s = scaler(0, n - 1, y0, y1);
   let body = axes(s, 0, n - 1, y0, y1, xLabel, '');
   if (y0 < 0) body += line(0, 0, n - 1, 0, s, 'stroke: var(--destructive); stroke-dasharray: 3 3');
-  if (target !== null) body += line(0, target, n - 1, target, s, 'stroke: var(--primary); stroke-dasharray: 6 4') + text(s.sx(n - 1), s.sy(target) - 4, 'meta ' + short(target), 'end', 'fill: var(--primary)');
+  if (target !== null) body += line(0, target, n - 1, target, s, 'stroke: var(--primary); stroke-dasharray: 6 4') + text(s.sx(n - 1), s.sy(target) - 4, fmt('ui.axis.target', { v: short(target) }), 'end', 'fill: var(--primary)');
   series.forEach((ser, i) => { if (!ser.points.length) return;
     const d = ser.points.map((v, k) => `${k ? 'L' : 'M'}${s.sx(k).toFixed(1)},${s.sy(v).toFixed(1)}`).join('');
     body += `<path d="${d}" style="fill:none; stroke: var(--chart-${i === 0 ? 4 : 2}); stroke-width: 2"/>`; });
@@ -53,7 +54,7 @@ export function demandChart({ a, b, c, P, versions = null, label }) {
   const g = demandGeometry({ a, b, c, P, versions });
   const qMax = Math.max(a / b, g.Qc, g.Q) * 1.05 || 1, pMax = Math.max(a, P, c) * 1.05 || 1;
   const s = scaler(0, qMax, 0, pMax);
-  let body = axes(s, 0, qMax, 0, pMax, 'cajas', 'precio');
+  let body = axes(s, 0, qMax, 0, pMax, fmt('ui.axis.boxes'), fmt('ui.axis.price'));
   body += poly(g.cs, s, 'cs', 'fill: color-mix(in oklch, var(--primary) 22%, transparent)') + poly(g.cs2, s, 'cs', 'fill: color-mix(in oklch, var(--primary) 22%, transparent)');
   body += poly(g.ps, s, 'ps', g.loss ? 'fill: color-mix(in oklch, var(--destructive) 25%, transparent)' : 'fill: color-mix(in oklch, var(--pos) 25%, transparent)');
   body += poly(g.dwl, s, 'dwl', 'fill: color-mix(in oklch, var(--muted-foreground) 35%, transparent)');
@@ -69,7 +70,7 @@ export function isoprofitChart({ a, b, c, F, P, label }) {
   const Q = Math.max(0, (a - P) / b), pi = (P - c) * Q - F;
   const qMax = (a / b) * 1.05 || 1, pMax = Math.max(a, P) * 1.1 || 1;
   const s = scaler(0, qMax, 0, pMax);
-  let body = axes(s, 0, qMax, 0, pMax, 'cajas', 'precio') + line(0, a, a / b, 0, s, 'stroke: var(--foreground); stroke-width: 2');
+  let body = axes(s, 0, qMax, 0, pMax, fmt('ui.axis.boxes'), fmt('ui.axis.price')) + line(0, a, a / b, 0, s, 'stroke: var(--foreground); stroke-width: 2');
   const levels = [pi, pi + Math.abs(pi) * 0.5 + F * 0.3, pi - Math.abs(pi) * 0.5 - F * 0.3];
   levels.forEach((lv, i) => {
     const pts = []; for (let k = 1; k <= 60; k++) { const q = (qMax * k) / 60; const p = c + (lv + F) / q; if (p > 0 && p < pMax) pts.push([q, p]); }
@@ -86,7 +87,7 @@ export function costChart({ F, c, qMax, Q = null, label }) {
   for (let k = 1; k <= 60; k++) { const q = (qm * k) / 60; pts.push([q, c + F / q]); }
   const yMax = Math.min(Math.max(...pts.map((p) => p[1])), c * 6 + 1) || 1;
   const s = scaler(0, qm, 0, yMax);
-  let body = axes(s, 0, qm, 0, yMax, 'cajas', 'costo');
+  let body = axes(s, 0, qm, 0, yMax, fmt('ui.axis.boxes'), fmt('ui.axis.cost'));
   body += `<path d="${pts.filter((p) => p[1] <= yMax).map(([q, y], k) => `${k ? 'L' : 'M'}${s.sx(q).toFixed(1)},${s.sy(y).toFixed(1)}`).join('')}" style="fill:none; stroke: var(--primary); stroke-width: 2"/>`;
   body += line(0, c, qm, c, s, 'stroke: var(--destructive); stroke-width: 1.5; stroke-dasharray: 5 4') + text(s.sx(qm) - 2, s.sy(c) - 4, 'CMg', 'end', 'fill: var(--destructive)');
   if (Q) body += `<circle cx="${s.sx(Q).toFixed(1)}" cy="${s.sy(Math.min(yMax, c + F / Q)).toFixed(1)}" r="5" style="fill: var(--primary)"/>`;

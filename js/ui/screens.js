@@ -1,6 +1,6 @@
 // Full screens and dialogs.
 import { esc } from './dom.js';
-import { button, card, dialog, richText, richInline } from './components.js';
+import { button, card, dialog, richText, richInline, langSwitch } from './components.js';
 import { fmt, number, gradingIntro, endingText, CFO_NAME, cfoLong } from '../content/copy.js';
 import { glossaryAll } from '../content/glossary.js';
 import { linkCore } from '../content/core.js';
@@ -8,17 +8,17 @@ import { ENDINGS, classifyEnding } from '../sim/endings.js';
 
 export function welcomeScreen(id = {}, error = '') {
   const f = (name, key, auto = '') => `<label class="field">${esc(fmt(key))}<input name="${name}" value="${esc(id[name])}" ${auto} required></label>`;
-  return `<main class="screen"><h1>${esc(fmt('ui.title'))}</h1><p class="lede">${esc(fmt('ui.subtitle'))}</p>
+  return `<main class="screen">${langSwitch()}<h1>${esc(fmt('ui.title'))}</h1><p class="lede">${esc(fmt('ui.subtitle'))}</p>
     <form data-welcome>${f('playerName', 'ui.welcome.name', 'autocomplete="name"')}${f('playerId', 'ui.welcome.id')}${f('classCode', 'ui.welcome.code')}${f('firmName', 'ui.welcome.firm', 'maxlength="40"')}
     ${error ? `<p class="err" role="alert">${esc(error)}</p>` : ''}${button({ label: fmt('ui.welcome.start'), size: 'lg', attrs: 'type="submit"' })}</form>
-    ${card({ title: 'Calificación', body: `<div class="grading">${esc(gradingIntro())}</div>` })}</main>`;
+    ${card({ title: esc(fmt('ui.grading')), body: `<div class="grading">${esc(gradingIntro())}</div>` })}</main>`;
 }
 
 export function lineScreen(firm, { tutorialDone = false, replay = false } = {}) {
   const opt = (line) => `<section class="card line-card"><h3>${esc(fmt(`ui.line.${line}`))}</h3>${richText(fmt(`ui.line.${line}.body`))}
     ${button({ label: fmt('ui.line.choose'), attrs: `data-line="${line}"` })}</section>`;
-  return `<main class="screen"><h1>${esc(firm)}</h1>
-    <p class="lede">Soy ${esc(CFO_NAME)} (${esc(cfoLong())}), tu director de finanzas. Antes de tostar una sola galleta, necesito que elijas qué clase de empresa vamos a ser. Es una decisión que se puede corregir después, pero cuesta. Mucho.</p>
+  return `<main class="screen">${langSwitch()}<h1>${esc(firm)}</h1>
+    <p class="lede">${esc(fmt('ui.line.lede', { cfo: CFO_NAME, cfoLong: cfoLong() }))}</p>
     <div class="lines">${opt('premium')}${opt('generico')}</div>
     ${tutorialDone ? `<label class="field" style="flex-direction:row; align-items:center; gap:8px; margin-top:16px"><input type="checkbox" data-replay ${replay ? 'checked' : ''} style="height:auto"> ${esc(fmt('ui.tutorial.replay'))}</label>` : ''}</main>`;
 }
@@ -32,7 +32,7 @@ export function endingDialog(run, gallery, sendStatus) {
     <p class="muted">${esc(fmt('ui.end.best'))}</p><p class="muted" role="status">${sendStatus ? esc(fmt(`ui.${sendStatus}`)) : ''}</p>
     <p class="muted">${esc(fmt('ui.gallery.intro', { n: gallery.length, total: ENDINGS.length }))}</p>`;
   return dialog({ title: e.title, body, actions: `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
-    ${button({ label: fmt('ui.end.new'), size: 'lg', attrs: 'data-newrun' })}${button({ label: 'Ver el tablero', variant: 'outline', size: 'lg', attrs: 'data-close-dialog' })}</div>` });
+    ${button({ label: fmt('ui.end.new'), size: 'lg', attrs: 'data-newrun' })}${button({ label: fmt('ui.end.board'), variant: 'outline', size: 'lg', attrs: 'data-close-dialog' })}</div>` });
 }
 
 export function galleryDialog(gallery) {
