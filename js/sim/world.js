@@ -1,5 +1,6 @@
 // Per-run world: every number the simulation needs, derived from (seed, line). Pure.
 import { createRng, deriveSeed } from '../rng.js';
+import { scheduleWildcards } from './wildcards.js';
 
 // Monthly units. Demand per product: P = a − b·Q (boxes per month). a0 + cProd must be even.
 export const TEMPLATES = {
@@ -27,10 +28,6 @@ export const TUNING = {
   aJitter: [-4, -2, 0, 2, 4], bJitter: [0.9, 1, 1.1],
 };
 
-// Filled by wildcards.js (Task 6); kept injectable to avoid an import cycle.
-let scheduler = () => [];
-export const setWildcardScheduler = (fn) => { scheduler = fn; };
-
 export function makeWorld(seed, line) {
   if (!TEMPLATES[line]) throw new Error(`unknown line ${line}`);
   const t = TUNING, L = t[line];
@@ -43,7 +40,7 @@ export function makeWorld(seed, line) {
     templates, allTemplates: { premium: TEMPLATES.premium, generico: TEMPLATES.generico },
     saturation: t.saturation, adDecay: t.adDecay, loyaltyDecay: t.loyaltyDecay,
     rival: { arrivalMonth: r.int(12, 18), rule: r.pick(['undercut', 'match', 'best_response']), costFactor: t.rivalCostFactor },
-    wildcards: scheduler(createRng(deriveSeed(seed, 'wildcards')), line, seed),
+    wildcards: scheduleWildcards(createRng(deriveSeed(seed, 'wildcards')), line),
     ipoTarget: L.ipoTarget, baseMultiple: L.baseMultiple, tariff: L.tariff, rent: L.rent,
     versionsCost: t.versionsCost, versionsUnlockMonth: t.versionsUnlockMonth,
     reposition: { cost: t.repositionCost, months: t.repositionMonths },

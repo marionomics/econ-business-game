@@ -1,11 +1,10 @@
 // One month of the simulation. Pure: tick(state, world) → { state, events }.
 import { quantityAt } from '../economy.js';
 import { productDemand, productCost, rivalShare, surplus, elasticityAt, fixedAdd } from './market.js';
+import { applyDueWildcards, resolveCrises } from './wildcards.js';
 
 export const MAX_MONTHS = 36;
 
-// Hooks filled by later modules (wildcards, rival, regulator, valuation). Each: (state, world, events) → void (mutates the clone).
-export const HOOKS = { beforeSales: [], afterSales: [] };
 
 function sell(p, s, world) {
   const d = productDemand(p, s, world), c = productCost(p, s, world);
@@ -37,7 +36,7 @@ export function tick(input, world) {
     for (const p of s.products) p.loyalty *= 0.5;
     events.push({ type: 'repositioned', line: s.line });
   }
-  for (const h of HOOKS.beforeSales) h(s, world, events);
+  applyDueWildcards(s, world, events);
 
   const perProduct = [];
   for (const p of s.products) {
@@ -59,7 +58,6 @@ export function tick(input, world) {
 
   const row = { month: s.month, revenue, cogs: revenue - contribution, contribution, fixed, ads, other: 0, profit: 0, cash: 0, perProduct };
   s.history.push(row);
-  for (const h of HOOKS.afterSales) h(s, world, events); // may add s.monthOther (fines…)
   row.other = s.monthOther;
   row.profit = contribution - fixed - ads - row.other;
   s.cash += row.profit;
@@ -68,5 +66,6 @@ export function tick(input, world) {
 
   if (s.cash < 0) { s.ended = { reason: 'bankrupt', month: s.month }; events.push({ type: 'bankrupt' }); }
   if (!s.ended && s.month >= MAX_MONTHS) { s.ended = { reason: 'end36', month: s.month }; events.push({ type: 'end36' }); }
+  resolveCrises(s, events);
   return { state: s, events };
 }
