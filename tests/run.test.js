@@ -61,3 +61,6 @@ test('no question is triggered by the month the run ends', () => {
   for (let s = 1; s <= 40; s++) { const run = randomRun(s, 'generico'); const endMonth = run.state.ended.month;
     assert.ok(run.questions.every(q => q.month < endMonth || q.trigger === 'launch' || q.trigger === 'expand' || q.trigger === 'versions'), `seed ${s}`); }
 });
+test('a new run opens with the CFO greeting (not a pause)', () => {
+  const run = createRun({ seed: 1, line: 'premium', meta: { runId: 'x' } });
+  assert.equal(run.inbox[0].type, 'welcome'); assert.equal(run.unseen, 0); });

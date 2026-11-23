@@ -23,7 +23,7 @@ test('every message, question and feedback of many runs renders completely', () 
     for (const q of run.questions) { for (const s of strings(describeQuestion(q, run))) assert.ok(!missing(s), `${q.id}: ${s}`);
       if (q.answered) for (const s of strings(describeFeedback(q, run))) assert.ok(!missing(s), `fb ${q.id}: ${s}`); }
   }
-  for (const t of ['wildcard', 'rivalArrives', 'question', 'feedback', 'crisisResolved']) assert.ok(types.has(t), t);
+  for (const t of ['welcome', 'wildcard', 'rivalArrives', 'question', 'feedback', 'crisisResolved']) assert.ok(types.has(t), t);
 });
 test('every ending, template and the grading intro have copy', () => {
   for (const e of ENDINGS) { assert.ok(ENDING_TEXT[e.id]?.title, e.id); assert.ok(ENDING_TEXT[e.id]?.text, e.id); }

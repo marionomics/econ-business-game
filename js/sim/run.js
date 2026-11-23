@@ -17,9 +17,11 @@ const LOG_CAP = 45000;
 
 export function createRun({ seed, line, meta = {} }) {
   const world = makeWorld(seed, line);
-  return { runId: meta.runId ?? String(seed), seed, line, meta, world, state: initialState(world),
+  const run = { runId: meta.runId ?? String(seed), seed, line, meta, world, state: initialState(world),
     inbox: [], seq: 0, unseen: 0, questions: [], queue: [], pending: null, fired: {}, inputError: false,
     lastQuip: -99, lastRunway: -99, log: { months: [], events: [], actions: [] }, score: null };
+  say(run, 'welcome', { line });
+  return run;
 }
 
 const say = (run, type, data = {}) => {

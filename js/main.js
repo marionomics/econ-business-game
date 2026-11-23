@@ -1,0 +1,187 @@
+// Wiring: identity → strategy → live run (clock + dashboard + CFO chat) → ending → results.
+import { createRun, act, step, answer, ackEvents, pauseReasons } from './sim/run.js';
+import { describeMessage, describeQuestion, describeFeedback, fmt, CFO_NAME } from './content/copy.js';
+import { renderTopbar, renderDashboard, messageChart } from './ui/dashboard.js';
+import { welcomeScreen, lineScreen, endingDialog, galleryDialog, manualDialog } from './ui/screens.js';
+import { popover, richText, button } from './ui/components.js';
+import { esc, icon } from './ui/dom.js';
+import { createClock } from './ui/clock.js';
+import { createChat } from './ui/chat.js';
+import { acceptClick } from './clickguard.js';
+import { newSeed } from './rng.js';
+import * as store from './storage.js';
+import { buildResultRow, sendResult, flushQueue } from './results.js';
+import { APPS_SCRIPT_URL, CLASS_CODES } from './config.js';
+import { classifyEnding } from './sim/endings.js';
+
+const app = document.getElementById('app');
+let run = null, view = 'welcome', chat = null, pushedSeq = 0, endingShown = false, sendStatus = null, renderedAt = 0;
+const ui = { tab: 'productos', focus: null, chatOpen: false };
+const clock = createClock({ onTick, intervalFor: (sp) => (sp === 2 ? 2000 : 4000), isHidden: () => document.hidden });
+
+// ---------- Views ----------
+function showWelcome(error = '') { view = 'welcome'; app.innerHTML = welcomeScreen(store.getIdentity() ?? {}, error); }
+function showLine() { view = 'line'; app.innerHTML = lineScreen(store.getIdentity()?.firmName ?? ''); }
+function showGame() {
+  view = 'game';
+  app.innerHTML = `<div id="top"></div><div class="layout"><div id="dash"></div>
+    <aside class="chat${ui.chatOpen ? ' open' : ''}" id="chatbox" aria-label="${esc(fmt('ui.chat'))}"><div class="chat-head"><span class="cfo-eye" id="eye"></span>
+      <div><strong>${esc(CFO_NAME)}</strong><small>${esc(fmt('ui.skip'))}</small></div>
+      <button class="btn btn-ghost btn-sm chat-toggle" data-chat-toggle>${icon('chat')}<span>${esc(fmt(ui.chatOpen ? 'ui.chat.close' : 'ui.chat.open'))}</span></button></div>
+    <div class="chat-log" id="chatlog" aria-live="polite"></div></aside></div><div id="overlay"></div>`;
+  const log = document.getElementById('chatlog');
+  chat = createChat({ log, renderDone: renderMessage, onTyping: (busy) => document.getElementById('eye')?.classList.toggle('typing', busy) });
+  // Messages from before a reload appear instantly; new ones are typed.
+  log.innerHTML = run.inbox.map((m) => renderMessage(toChat(m))).join(''); log.scrollTop = log.scrollHeight;
+  pushedSeq = run.seq;
+  renderTop(); renderDash();
+  if (run.state.ended) showEnding();
+}
+const renderTop = () => { const el = document.getElementById('top'); if (el) el.innerHTML = renderTopbar(run, ui, clock); };
+function renderDash(force = false) {
+  const el = document.getElementById('dash'); if (!el) return;
+  if (!force && el.contains(document.activeElement) && document.activeElement.matches('input')) return; // don't steal focus while typing
+  el.innerHTML = renderDashboard(run, ui); renderedAt = performance.now();
+}
+
+// ---------- Chat ----------
+function toChat(m) {
+  const d = describeMessage(m, run);
+  return { seq: m.seq, month: m.month, type: m.type, tone: d.tone, text: d.text, question: d.question, feedback: d.feedback,
+    chartSvg: d.chart ? messageChart(d.chart.kind, run) : '' };
+}
+function renderMessage(msg) {
+  const meta = `<span class="meta">Mes ${msg.month} · ${esc(CFO_NAME)}</span>`;
+  let inner;
+  if (msg.type === 'question') {
+    const q = run.questions[msg.question], dq = describeQuestion(q, run), open = !q.answered && run.pending === msg.question;
+    inner = richText(dq.prompt);
+    if (open) inner += dq.input === 'mc'
+      ? `<div class="options">${dq.options.map((o) => button({ label: o.label, variant: 'outline', attrs: `data-answer="${esc(o.id)}"` })).join('')}</div>`
+      : `<form data-qform><input inputmode="decimal" autocomplete="off" aria-label="${esc(fmt('ui.yourAnswer'))}" required>${button({ label: fmt('ui.answer'), attrs: 'type="submit"' })}</form>${run.inputError ? `<p class="err" role="alert">${esc(fmt('ui.inputError'))}</p>` : ''}`;
+  } else if (msg.type === 'feedback') {
+    const q = run.questions[msg.feedback], f = describeFeedback(q, run);
+    inner = `<p class="${f.correct ? 'verdict-ok' : 'verdict-bad'}">${esc(f.title)}</p><p class="muted">${esc(f.detail)}</p>${richText(f.explanation)}`;
+  } else inner = richText(msg.text);
+  return `<div class="msg ${msg.tone ?? ''}" id="msg-${msg.seq}">${meta}${inner}${msg.chartSvg ? `<div class="chart">${msg.chartSvg}</div>` : ''}</div>`;
+}
+function pushNew() { for (const m of run.inbox.filter((x) => x.seq >= pushedSeq)) chat.push(toChat(m)); pushedSeq = run.seq; }
+function refreshQuestionMessages() {
+  for (const m of run.inbox.filter((x) => x.type === 'question')) { const el = document.getElementById(`msg-${m.seq}`); if (el) el.outerHTML = renderMessage(toChat(m)); }
+}
+
+// ---------- Game flow ----------
+function save() { if (run && !run.state.ended) store.saveCurrentRun(run); }
+function afterChange() {
+  pushNew();
+  const reasons = pauseReasons(run);
+  if (reasons.includes('ended')) clock.pause('ended');
+  else if (reasons.includes('question')) clock.pause('question');
+  save(); renderTop(); renderDash();
+  if (run.state.ended) showEnding();
+}
+function onTick() {
+  run = step(run);
+  if (run.unseen > 0 && !clock.paused) clock.pause('event');
+  afterChange();
+}
+function play() {
+  if (run.pending !== null || run.state.ended) return;
+  run = ackEvents(run); save(); clock.resume(); renderTop();
+}
+function doAct(action) { run = act(run, action); afterChange(); }
+function doAnswer(value) {
+  const before = run.questions.length;
+  run = answer(run, value);
+  refreshQuestionMessages();
+  if (run.questions.length > before || run.pending === null) afterChange(); else renderTop();
+}
+function showEnding() {
+  if (endingShown) return; endingShown = true; clock.pause('ended');
+  store.addToGallery(classifyEndingSafe());
+  store.clearCurrentRun();
+  const draw = () => { const o = document.getElementById('overlay'); if (o && view === 'game') o.innerHTML = endingDialog(run, store.getGallery(), sendStatus); };
+  sendStatus = 'sending'; draw();
+  sendResult(APPS_SCRIPT_URL, buildResultRow(run, store.getGallery())).then((r) => { sendStatus = r; draw(); });
+}
+const classifyEndingSafe = () => classifyEnding(run.state);
+
+function newRun(line) {
+  const id = store.getIdentity();
+  run = createRun({ seed: newSeed(), line, meta: { ...id, runId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`, runNumber: store.nextRunNumber() } });
+  endingShown = false; sendStatus = null; ui.tab = 'productos'; ui.focus = null;
+  clock.pause('user'); store.saveCurrentRun(run); showGame();
+}
+
+// ---------- Events ----------
+function commitInput(input) {
+  const [kind, uid] = input.dataset.input.split(':');
+  if (kind === 'price') doAct({ type: 'setPrice', uid, price: input.value });
+  else if (kind === 'ad') doAct({ type: 'setAd', uid, ad: input.value });
+}
+function openPopover(btn) {
+  const o = document.getElementById('overlay') ?? app; closePopover();
+  o.insertAdjacentHTML('beforeend', popover(btn.dataset.term));
+  const pop = o.querySelector('.popover'), r = btn.getBoundingClientRect();
+  const left = Math.min(window.innerWidth - pop.offsetWidth - 16, Math.max(16, r.left - 20));
+  const top = r.bottom + 8 + pop.offsetHeight > window.innerHeight ? Math.max(16, r.top - pop.offsetHeight - 8) : r.bottom + 8;
+  pop.style.left = `${left}px`; pop.style.top = `${top}px`; pop.querySelector('[data-close-popover]').focus();
+}
+const closePopover = () => document.querySelectorAll('.popover').forEach((p) => p.remove());
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button, [data-term]'); if (!t) { if (!e.target.closest('.popover')) closePopover(); return; }
+  if (t.dataset.term) { e.preventDefault(); openPopover(t); return; }
+  if (t.matches('[data-close-popover]')) return closePopover();
+  if (t.matches('[data-close-dialog]')) { document.getElementById('overlay').innerHTML = ''; return; }
+  if (t.dataset.dialog) { document.getElementById('overlay').innerHTML = t.dataset.dialog === 'manual' ? manualDialog() : galleryDialog(store.getGallery()); return; }
+  if (t.matches('[data-newrun]')) { showLine(); return; }
+  if (t.dataset.line) { newRun(t.dataset.line); return; }
+  if (t.matches('[data-chat-toggle]')) { ui.chatOpen = !ui.chatOpen; document.getElementById('chatbox').classList.toggle('open', ui.chatOpen);
+    t.querySelector('span').textContent = fmt(ui.chatOpen ? 'ui.chat.close' : 'ui.chat.open'); return; }
+  if (!run || view !== 'game') return;
+  const guarded = t.dataset.act || t.dataset.answer || t.dataset.clock;
+  if (guarded && !acceptClick(e, performance.now(), renderedAt)) return;
+  if (t.dataset.clock === 'play') return play();
+  if (t.dataset.clock === 'pause') { clock.pause('user'); renderTop(); return; }
+  if (t.dataset.speed) { const sp = Number(t.dataset.speed); if (clock.paused) clock.speed = sp; else clock.play(sp); renderTop(); return; }
+  if (t.dataset.tab) { ui.tab = t.dataset.tab; renderDash(true); return; }
+  if (t.dataset.focus) { ui.focus = t.dataset.focus; renderDash(true); return; }
+  if (t.dataset.answer) return doAnswer(t.dataset.answer);
+  if (t.dataset.stepup || t.dataset.stepdown) {
+    const id = t.dataset.stepup || t.dataset.stepdown, input = document.querySelector(`[data-input="${CSS.escape(id)}"]`);
+    const v = (Number(input.value) || 0) + (t.dataset.stepup ? 1 : -1) * Number(t.dataset.step || 1);
+    input.value = Math.max(Number(input.dataset.min), Math.min(Number(input.dataset.max), v));
+    if (!id.startsWith('v')) commitInput(input); return;
+  }
+  const a = t.dataset.act;
+  if (a === 'launch') doAct({ type: 'launch', templateId: t.dataset.template });
+  if (a === 'discontinue') doAct({ type: 'discontinue', uid: t.dataset.uid });
+  if (a === 'expand') doAct({ type: 'expand' });
+  if (a === 'reposition') doAct({ type: 'reposition' });
+  if (a === 'versions') { const v = (k) => document.querySelector(`[data-input="${k}:${CSS.escape(t.dataset.uid)}"]`)?.value;
+    doAct({ type: 'versions', uid: t.dataset.uid, high: v('vhigh'), low: v('vlow') }); }
+});
+document.addEventListener('change', (e) => { if (e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { commitInput(e.target); renderDash(true); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closePopover(); if (document.querySelector('.dialog') && !document.querySelector('[data-newrun]')) document.getElementById('overlay').innerHTML = ''; }
+  if (e.key === 'Enter' && e.target.matches('[data-input^="price:"], [data-input^="ad:"]')) { e.preventDefault(); commitInput(e.target); renderDash(true); }
+});
+document.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (e.target.matches('[data-welcome]')) {
+    const id = Object.fromEntries([...new FormData(e.target)].map(([k, v]) => [k, String(v).trim()]));
+    if (!id.playerName || !id.playerId || !id.classCode || !id.firmName) return showWelcome(fmt('ui.welcome.missing'));
+    if (CLASS_CODES.length && !CLASS_CODES.map((c) => c.toLowerCase()).includes(id.classCode.toLowerCase())) return showWelcome(fmt('ui.welcome.badCode'));
+    store.setIdentity(id); showLine(); return;
+  }
+  if (e.target.matches('[data-qform]')) doAnswer(e.target.querySelector('input').value);
+});
+document.addEventListener('visibilitychange', () => { clock.handleVisibility(); if (view === 'game') renderTop(); });
+
+// ---------- Start ----------
+flushQueue(APPS_SCRIPT_URL).catch(() => {});
+run = store.loadCurrentRun();
+if (run && run.state && !run.state.ended) { clock.pause('resume'); showGame(); }
+else if (store.getIdentity()) { run = null; showLine(); }
+else showWelcome();

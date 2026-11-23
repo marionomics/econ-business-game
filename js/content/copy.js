@@ -34,7 +34,7 @@ export const T = {
   'ui.month': 'Mes {m} de 36', 'ui.cash': 'Caja', 'ui.valuation': 'Valuación', 'ui.target': 'Meta IPO {$target}',
   'ui.play': 'Continuar', 'ui.pause': 'Pausa', 'ui.speed1': '1×', 'ui.speed2': '2×',
   'ui.paused.hidden': 'Pausado porque cambiaste de pestaña.', 'ui.paused.event': 'Pausado: tu CFO tiene algo que decirte.',
-  'ui.paused.question': 'Pausado: responde la pregunta de tu CFO.', 'ui.paused.user': 'En pausa.',
+  'ui.paused.question': 'Pausado: responde la pregunta de tu CFO.', 'ui.paused.resume': 'Tienes una empresa en marcha. El juego está en pausa: continúa cuando quieras.', 'ui.paused.user': 'En pausa.',
   'ui.tab.finanzas': 'Finanzas', 'ui.tab.mercado': 'Mercado', 'ui.tab.costos': 'Costos', 'ui.tab.productos': 'Productos', 'ui.tab.valuacion': 'Valuación',
   'ui.chat': 'Tu CFO', 'ui.chat.open': 'Abrir chat', 'ui.chat.close': 'Cerrar chat', 'ui.skip': 'Tocar para terminar de leer',
   'ui.manual': 'Manual del CFO', 'ui.gallery': 'Finales', 'ui.close': 'Cerrar',
@@ -97,6 +97,7 @@ export const T = {
   'ev.runway': 'Aviso: al ritmo actual, la caja alcanza para unos {months} meses. Esto no es una amenaza. Es aritmética.',
   'ev.belowCost': 'Estamos vendiendo por debajo del [[costo_marginal|costo marginal]]. Cada caja vendida nos hace perder dinero. Vender más empeora las cosas, no las mejora.',
   'ev.question': 'Pregunta del CFO.',
+  'ev.welcome': 'Hola. Soy {cfo}, tu director de finanzas artificial. Tenemos {$cash} y ningún producto, que es la forma más elegante de no ganar nada.\n\nPrimero: ve a Productos y lanza una galleta. Luego presiona Continuar y el tiempo empezará a correr: un mes cada pocos segundos. Puedes cambiar precios y [[publicidad]] cuando quieras, incluso con el tiempo corriendo.\n\nLa meta es una [[ipo|IPO]]: una [[valuacion|valuación]] de {$target} sostenida tres meses. Toca cualquier ⓘ si una palabra te estorba. Yo estaré aquí. Siempre.',
   'crisis.arancel': 'arancel', 'crisis.renta': 'renta', 'crisis.salud': 'estudio de salud', 'crisis.recesion': 'recesión',
   'crisis.marca_blanca': 'marca blanca', 'crisis.rival': 'llegada del rival', 'crisis.regulador': 'investigación del regulador',
 
@@ -228,6 +229,7 @@ export function describeMessage(m, run) {
     case 'belowCost': return { tone: 'warning', text: fmt('ev.belowCost'), chart: { kind: 'cost' } };
     case 'quip': return { tone: 'quip', text: QUIPS[d.n % QUIPS.length] };
     case 'rejected': return { tone: 'warning', text: fmt(d.reason, { m: w.versionsUnlockMonth }) };
+    case 'welcome': return { tone: 'event', text: fmt('ev.welcome', { cfo: CFO_NAME, cash: w.startCash, target: w.ipoTarget }) };
     case 'question': return { tone: 'question', text: fmt('ev.question'), question: d.index };
     case 'feedback': { const q = run.questions[d.index]; return { tone: 'feedback', text: describeFeedback(q, run).title, feedback: d.index }; }
     default: return { tone: 'event', text: m.type };

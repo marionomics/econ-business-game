@@ -136,5 +136,15 @@ tr.total td { font-weight: 700; border-top: 2px solid var(--foreground); border-
   .chat.open { height: min(80vh, 640px); }
   .chat:not(.open) .chat-log { overflow: hidden; }
   .chat-toggle { display: inline-flex; margin-left: auto; }
+  .grid2, .controls, .launch, .lines { grid-template-columns: minmax(0, 1fr); }
+  .kpis { flex-wrap: wrap; gap: 10px; }
+  .toollinks .btn span { display: none; }
+  .toollinks .btn { width: 34px; padding: 0; }
+  .brand small { white-space: normal; }
+  .product-head { flex-direction: column; gap: 2px; }
+  #dash, .tabpanel, .card, .product { min-width: 0; }
+  .stepper-input input { min-width: 0; }
+  .card .btn-sm { white-space: normal; height: auto; min-height: 30px; padding: 6px 12px; text-align: left; max-width: 100%; }
 }
+body { overflow-x: hidden; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
