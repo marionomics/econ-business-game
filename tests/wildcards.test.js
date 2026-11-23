@@ -8,7 +8,7 @@ import { WILDCARDS, scheduleWildcards } from '../js/sim/wildcards.js';
 import { productDemand, productCost } from '../js/sim/market.js';
 import { createRng } from '../js/rng.js';
 
-const base = (line = 'premium', wildcards = []) => ({ ...makeWorld(3, line), wildcards, rival: { arrivalMonth: 99, rule: 'match', costFactor: 1 } });
+const base = (line = 'premium', wildcards = []) => ({ ...makeWorld(3, line), wildcards, rival: { arrivalMonth: 99, rule: 'match', costFactor: 1 }, ipoTarget: Infinity, regulator: { ...makeWorld(3, line).regulator, shareThreshold: 2 } });
 const firm = (w) => { let s = { ...initialState(w), cash: 1e8 }; return applyAction(s, w, { type: 'launch', templateId: w.templates[0].id }).state; };
 const to = (s, w, m) => { while (s.month < m && !s.ended) s = tick(s, w).state; return s; };
 const opt = (p, s, w) => (productDemand(p, s, w).a + productCost(p, s, w)) / 2;

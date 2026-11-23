@@ -16,7 +16,7 @@ export function applyAction(input, world, action) {
   if (input.ended) return fail('act.ended');
   const s = structuredClone(input);
   const findProduct = () => s.products.find((p) => p.uid === action.uid && p.active);
-  const pay = (cost) => { if (s.cash < cost) return false; s.cash -= cost; return true; };
+  const pay = (cost) => { if (s.cash < cost) return false; s.cash -= cost; (s.investments ||= []).push({ month: s.month, amount: cost, type: action.type }); return true; };
 
   switch (action.type) {
     case 'setPrice': {

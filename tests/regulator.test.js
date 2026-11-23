@@ -7,7 +7,7 @@ import { tick } from '../js/sim/tick.js';
 
 // Thresholds chosen so the template optimum is "abusive" and a modest price is not.
 const world = () => ({ ...makeWorld(3, 'premium'), wildcards: [], rival: { arrivalMonth: 99, rule: 'match', costFactor: 1 },
-  regulator: { shareThreshold: 0.6, markupThreshold: 0.5, watchMonths: 3, deadlineMonths: 3, fine: 50000 } });
+  regulator: { shareThreshold: 0.6, markupThreshold: 0.5, watchMonths: 3, deadlineMonths: 3, fine: 50000 }, ipoTarget: Infinity });
 const firm = (w, price) => { let s = applyAction({ ...initialState(w), cash: 1e8 }, w, { type: 'launch', templateId: w.templates[0].id }).state;
   return price ? applyAction(s, w, { type: 'setPrice', uid: s.products[0].uid, price }).state : s; };
 const run = (s, w, n) => { const evs = []; for (let i = 0; i < n && !s.ended; i++) { const r = tick(s, w); s = r.state; evs.push(...r.events); } return { s, evs }; };

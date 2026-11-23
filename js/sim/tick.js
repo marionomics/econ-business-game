@@ -4,6 +4,7 @@ import { productDemand, productCost, rivalShare, surplus, elasticityAt, fixedAdd
 import { applyDueWildcards, resolveCrises } from './wildcards.js';
 import { rivalStep } from './rival.js';
 import { regulatorStep } from './regulator.js';
+import { valuationStep } from './valuation.js';
 
 export const MAX_MONTHS = 36;
 
@@ -67,6 +68,7 @@ export function tick(input, world) {
   s.cash += row.profit;
   row.cash = s.cash;
   delete s.monthOther;
+  valuationStep(s, world, events);
 
   if (s.cash < 0 && !s.ended) { s.ended = { reason: 'bankrupt', month: s.month }; events.push({ type: 'bankrupt' }); }
   if (!s.ended && s.month >= MAX_MONTHS) { s.ended = { reason: 'end36', month: s.month }; events.push({ type: 'end36' }); }

@@ -7,7 +7,7 @@ import { tick } from '../js/sim/tick.js';
 import { rivalPrice, rivalProfitAt } from '../js/sim/rival.js';
 import { productCost } from '../js/sim/market.js';
 
-const w0 = (rule, arrivalMonth = 4) => ({ ...makeWorld(3, 'premium'), wildcards: [], rival: { arrivalMonth, rule, costFactor: 1 } });
+const w0 = (rule, arrivalMonth = 4) => ({ ...makeWorld(3, 'premium'), wildcards: [], rival: { arrivalMonth, rule, costFactor: 1 }, ipoTarget: Infinity });
 const firm = (w) => applyAction({ ...initialState(w), cash: 1e8 }, w, { type: 'launch', templateId: w.templates[0].id }).state;
 const to = (s, w, m) => { const evs = []; while (s.month < m && !s.ended) { const r = tick(s, w); s = r.state; evs.push(...r.events); } return { s, evs }; };
 
