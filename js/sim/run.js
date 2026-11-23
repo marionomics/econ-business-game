@@ -8,6 +8,7 @@ import { buildFor } from './questions.js';
 import { scoreRun } from './score.js';
 import { parseNumber, parseNumberCandidates, gradeAnswer } from '../answers.js';
 import { say } from './inbox.js';
+import { initCoach, coachAfterAct, coachAfterStep } from './coach.js';
 import { initTutorial, tutorialPaused, tutorialBlocksAction, tutorialAfterAct, tutorialAfterStep, tutorialAfterAnswer } from './tutorial.js';
 
 export const MAX_QUESTIONS = 9;
@@ -15,11 +16,12 @@ export const MIN_QUESTIONS = 6;
 const PULSE_MONTHS = [6, 12, 18, 24, 30, 33];
 const LOG_CAP = 45000;
 
-export function createRun({ seed, line, meta = {}, tutorial = false }) {
+export function createRun({ seed, line, meta = {}, tutorial = false, coachSeen = [] }) {
   const world = makeWorld(seed, line, { tutorial });
   const run = { runId: meta.runId ?? String(seed), seed, line, meta, world, state: initialState(world),
     inbox: [], seq: 0, unseen: 0, questions: [], queue: [], pending: null, fired: {}, inputError: false,
     lastQuip: -99, lastRunway: -99, log: { months: [], events: [], actions: [] }, score: null, tutorial: null };
+  initCoach(run, coachSeen);
   if (tutorial) initTutorial(run); else say(run, 'welcome', { line });
   return run;
 }
@@ -57,6 +59,7 @@ export function act(input, action) {
   run.log.actions.push({ m: run.state.month, t: action.type, ...(action.templateId ? { id: action.templateId } : {}) });
   const suppressLaunchQuestion = tutorialAfterAct(run, action);
   if (action.type === 'launch' && !suppressLaunchQuestion) { const p = run.state.products.at(-1); trigger(run, 'launch', { uid: p.uid }, `launch:${action.templateId}`); }
+  coachAfterAct(run, action);
   if (action.type === 'expand') trigger(run, 'expand', {}, 'expand');
   if (action.type === 'versions') trigger(run, 'versions', { uid: action.uid }, 'versions');
   return run;
@@ -86,6 +89,7 @@ export function step(input) {
   }
   const ask = tutorialAfterStep(run);
   if (ask) trigger(run, ask.key, ask.ctx, ask.once);
+  coachAfterStep(run, events);
   compactLog(run);
   finishIfEnded(run);
   return run;
@@ -112,7 +116,7 @@ export function answer(input, raw) {
   return run;
 }
 
-export function ackEvents(input) { if (!input.unseen) return input; return { ...input, unseen: 0 }; }
+export function ackEvents(input) { if (!input.unseen) return input; return { ...input, unseen: 0, coachActive: null }; }
 
 export function pauseReasons(run) {
   const r = [];
