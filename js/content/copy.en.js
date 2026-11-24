@@ -160,6 +160,7 @@ export const T = {
   'ev.crisisResolved.bad': 'Crisis "{crisis}" not survived: six months later we are still losing money. Check prices and costs.',
   'ev.ipo': 'You did it: the valuation stayed above the target for three months in a row. We are going public. I declare myself… satisfied.',
   'ev.bankrupt': 'Cash went negative. We are bankrupt.',
+  'ev.bankrupt.more': "The ending window explains what went wrong.",
   'ev.end36': '36 months have passed. Time is up.',
   'ev.repositioned': "The repositioning is done. We are now a {line} brand. Half our loyal customers didn't notice we still existed.",
   'ev.runway': "Warning: at the current pace, cash lasts about {months} months. This isn't a threat. It's arithmetic.",

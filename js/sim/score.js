@@ -1,7 +1,9 @@
 // Grade of one run (spec §5 + anti-exploit rules). Pure.
+import { ipoTargetOf } from './valuation.js';
+
 export function scoreRun(run) {
   const { state, world } = run;
-  const valuationPts = 50 * Math.min(1, state.bestSustained / world.ipoTarget);
+  const valuationPts = 50 * Math.min(1, state.bestSustained / ipoTargetOf(state, world));
   const occurred = state.crises.length, survived = state.crises.filter((c) => c.survived === true).length;
   const asked = (run.questions ?? []).filter((q) => q.answered).length;
   const correct = (run.questions ?? []).filter((q) => q.correct).length;

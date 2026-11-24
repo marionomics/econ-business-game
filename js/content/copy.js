@@ -1,5 +1,5 @@
 // Locale-aware access to the game's text. The text itself lives in copy.es.js / copy.en.js.
-import { classifyEnding } from '../sim/endings.js';
+import { ipoTargetOf } from '../sim/valuation.js';
 import { getLocale } from './locale.js';
 import * as es from './copy.es.js';
 import * as en from './copy.en.js';
@@ -55,7 +55,7 @@ export function describeMessage(m, run) {
   const product = productName(run, d.uid ?? run.tutorial?.uid);
   switch (m.type) {
     case 'tutorial': return { tone: 'tutorial', tour: !!d.tour, nav: navList(d.nav),
-      text: fmt(d.id, { ...d, firm: run.meta.firmName ?? fmt('ui.title'), cfo: CFO_NAME, target: w.ipoTarget, product }) };
+      text: fmt(d.id, { ...d, firm: run.meta.firmName ?? fmt('ui.title'), cfo: CFO_NAME, target: ipoTargetOf(run.state, w), product }) };
     case 'coach': return { tone: 'coach', nav: navList(d.nav), text: fmt(`coach.${d.id}`) };
     case 'wildcard': {
       const vars = { tariff: w.tariff, rent: w.rent, segment: segmentName(run.state.line), product: productName(run, d.params?.uid) };
@@ -69,7 +69,7 @@ export function describeMessage(m, run) {
     case 'breakup': return { tone: 'ending', text: fmt('ev.breakup') };
     case 'crisisResolved': return { tone: d.survived ? 'event' : 'warning', nav: navList(d.nav), text: fmt(d.survived ? 'ev.crisisResolved.ok' : 'ev.crisisResolved.bad', { crisis: fmt(`crisis.${d.id}`) }) };
     case 'ipo': return { tone: 'ending', text: fmt('ev.ipo'), chart: { kind: 'valuation' } };
-    case 'bankrupt': return { tone: 'ending', text: fmt('ev.bankrupt') + ' ' + endingText(classifyEnding(run.state)).text, chart: { kind: 'cash' } };
+    case 'bankrupt': return { tone: 'ending', text: fmt('ev.bankrupt') + ' ' + fmt('ev.bankrupt.more'), chart: { kind: 'cash' } }; // the diagnosis is in the ending dialog
     case 'end36': return { tone: 'ending', text: fmt('ev.end36') };
     case 'repositioned': return { tone: 'event', text: fmt('ev.repositioned', { line: lineName(d.line) }) };
     case 'runway': return { tone: 'warning', nav: navList(d.nav), chart: { kind: 'cash' },
@@ -78,7 +78,7 @@ export function describeMessage(m, run) {
     case 'quip': return { tone: 'quip', text: quips()[d.n % quips().length] };
     case 'rejected': return { tone: 'warning', text: fmt(d.reason, { m: w.versionsUnlockMonth })
       + (d.needed ? ' ' + fmt('act.noCash.detail', d) + (d.monthsOfProfit ? ' ' + fmt('act.noCash.months', { n: d.monthsOfProfit }) : '') : '') };
-    case 'welcome': return { tone: 'event', text: fmt('ev.welcome', { cfo: CFO_NAME, cash: w.startCash, target: w.ipoTarget }) };
+    case 'welcome': return { tone: 'event', text: fmt('ev.welcome', { cfo: CFO_NAME, cash: w.startCash, target: ipoTargetOf(run.state, w) }) };
     case 'question': return { tone: 'question', text: fmt('ev.question'), question: d.index };
     case 'feedback': { const q = run.questions[d.index]; return { tone: 'feedback', text: describeFeedback(q, run).title, feedback: d.index }; }
     default: return { tone: 'event', text: m.type };

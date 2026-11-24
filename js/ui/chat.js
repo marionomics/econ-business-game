@@ -37,7 +37,8 @@ export function createChat({ log, renderDone, onTyping = () => {}, cps = 45,
     }
     if (s.current) {
       if (!typingEl) { typingEl = document.createElement('div'); typingEl.className = `msg ${s.current.msg.tone ?? ''}`; log.appendChild(typingEl); }
-      typingEl.innerHTML = `<span class="caret"></span>`; typingEl.firstChild.textContent = s.current.shown; log.scrollTop = log.scrollHeight;
+      if (!typingEl.firstChild) typingEl.innerHTML = '<span class="typed"></span><span class="caret" aria-hidden="true"></span>';
+      typingEl.firstChild.textContent = s.current.shown; log.scrollTop = log.scrollHeight;
     }
     onTyping(s.busy);
     if (s.busy) raf = requestAnimationFrame(frame);

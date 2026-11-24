@@ -4,7 +4,7 @@ import { button, tabs, card, stepper, infoButton, richInline, langSwitch } from 
 import { lineChart, demandChart, isoprofitChart, costChart } from './charts.js';
 import { fmt, money, number, pct, slope, t, templateName, templateBlurb } from '../content/copy.js';
 import { productDemand, productCost, surplus } from '../sim/market.js';
-import { valuation, sustained } from '../sim/valuation.js';
+import { valuation, sustained, ipoTargetOf } from '../sim/valuation.js';
 import { launchableTemplates } from '../sim/actions.js';
 
 const TABS = ['finanzas', 'mercado', 'costos', 'productos', 'valuacion'];
@@ -22,7 +22,7 @@ export function renderTopbar(run, ui, clock) {
   const s = run.state, w = run.world, last = s.history.at(-1);
   const val = last?.valuation ?? valuation(s, w).value;
   const sus = sustained(s.history);
-  const progress = Math.max(0, Math.min(1, sus / w.ipoTarget));
+  const progress = Math.max(0, Math.min(1, sus / ipoTargetOf(s, w)));
   const playing = !clock.paused;
   const reason = clock.paused ? (s.ended ? '' : fmt(`ui.paused.${clock.reason && t()[`ui.paused.${clock.reason}`] ? clock.reason : 'user'}`)) : '';
   return `<header class="topbar"><div class="topbar-in">
@@ -40,7 +40,7 @@ export function renderTopbar(run, ui, clock) {
         ${button({ label: fmt('ui.gallery'), variant: 'ghost', size: 'sm', ico: 'star', attrs: 'data-dialog="gallery"' })}</div>
     </div>
     <div class="progress" role="progressbar" aria-valuenow="${Math.round(progress * 100)}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(fmt('ui.aria.progress'))}"><i style="width:${(progress * 100).toFixed(1)}%"></i></div>
-    <div class="progress-label"><span>${esc(fmt('ui.month', { m: s.month }))}</span><span>${L('ui.target', { target: w.ipoTarget })} ${infoButton('ipo')}</span></div>
+    <div class="progress-label"><span>${esc(fmt('ui.month', { m: s.month }))}</span><span>${L('ui.target', { target: ipoTargetOf(s, w) })} ${infoButton('ipo')}</span></div>
     ${reason ? `<div class="pausebar" role="status">${esc(reason)}</div>` : ''}
   </div></header>`;
 }
@@ -138,15 +138,15 @@ function valuacion(run) {
   const series = [{ label: fmt('ui.valuation'), points: s.history.map((r) => r.valuation ?? 0) }];
   const parts = fmt('ui.val.parts', { base: v.parts.base, growth: pct(v.parts.growth), margin: pct(v.parts.margin), reg: v.parts.regulator });
   return card({ title: L('ui.val.title'), body: `<p class="num">${esc(fmt('ui.val.line', { annual: v.annualProfit, mult: v.multiple, cash: v.cash, value: v.value }))}</p>
-      <p class="muted">${esc(parts)}</p><p>${L('ui.val.sustained', { v: sustained(s.history), target: w.ipoTarget })}</p>` })
-    + card({ body: `<div class="chart">${lineChart({ series, target: w.ipoTarget, label: fmt('ui.chart.valuation') })}</div>` });
+      <p class="muted">${esc(parts)}</p><p>${L('ui.val.sustained', { v: sustained(s.history), target: ipoTargetOf(s, w) })}</p>` })
+    + card({ body: `<div class="chart">${lineChart({ series, target: ipoTargetOf(s, w), label: fmt('ui.chart.valuation') })}</div>` });
 }
 
 // Chart for a CFO message, from the current run.
 export function messageChart(kind, run) {
   const s = run.state, p = focusProduct(run, {});
   if (kind === 'cash') return lineChart({ series: [{ label: fmt('ui.cash'), points: [run.world.startCash, ...s.history.map((r) => r.cash)] }], label: fmt('ui.chart.cash') });
-  if (kind === 'valuation') return lineChart({ series: [{ label: fmt('ui.valuation'), points: s.history.map((r) => r.valuation ?? 0) }], target: run.world.ipoTarget, label: fmt('ui.chart.valuation') });
+  if (kind === 'valuation') return lineChart({ series: [{ label: fmt('ui.valuation'), points: s.history.map((r) => r.valuation ?? 0) }], target: ipoTargetOf(s, run.world), label: fmt('ui.chart.valuation') });
   if (!p) return '';
   const { d, c } = productNow(run, p);
   if (kind === 'cost') return isoprofitChart({ a: d.a, b: d.b, c, F: s.F / Math.max(1, active(s).length) + p.fixedMonthly, P: p.price, label: fmt('ui.chart.iso') });

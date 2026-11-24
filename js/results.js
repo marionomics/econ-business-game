@@ -1,6 +1,7 @@
 // One Sheet row per finished run, and a send queue that survives being offline.
 import { enqueue, peekQueue, removeFromQueue } from './storage.js';
 import { classifyEnding } from './sim/endings.js';
+import { ipoTargetOf } from './sim/valuation.js';
 
 export const RESULT_COLUMNS = ['runId', 'timestamp', 'classCode', 'playerId', 'playerName', 'runNumber', 'seed', 'line', 'endingId',
   'monthReached', 'bestSustained', 'ipoTarget', 'valuationPts', 'crisesOccurred', 'crisesSurvived', 'crisesPts', 'questionsAsked',
@@ -18,7 +19,7 @@ export function buildResultRow(run, gallery = []) {
   const row = {
     runId: run.runId, timestamp: new Date().toISOString(), classCode: m.classCode, playerId: normalizeId(m.playerId),
     playerName: m.playerName, runNumber: m.runNumber, seed: run.seed, line: run.line, endingId: classifyEnding(st),
-    monthReached: st.month, bestSustained: Math.round(st.bestSustained), ipoTarget: run.world.ipoTarget,
+    monthReached: st.month, bestSustained: Math.round(st.bestSustained), ipoTarget: ipoTargetOf(st, run.world),
     valuationPts: r1(sc.valuationPts), crisesOccurred: sc.crises.occurred, crisesSurvived: sc.crises.survived, crisesPts: r1(sc.crisesPts),
     questionsAsked: sc.questions.asked, questionsCorrect: sc.questions.correct, questionsPts: r1(sc.questionsPts), total: sc.total,
     galleryCount: gallery.length, log: JSON.stringify(run.log).slice(0, 49000),

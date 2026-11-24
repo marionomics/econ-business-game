@@ -42,6 +42,15 @@ function showGame() {
   const waiting = pauseReasons(run); if (waiting.includes('tutorial') || waiting.includes('question')) openChat();
   if (run.state.ended) showEnding();
 }
+// Keyboard users: a monthly re-render must not drop the focus. Remember the focused control by its data attributes.
+const FOCUS_KEYS = ['data-clock', 'data-speed', 'data-lang', 'data-tab', 'data-focus', 'data-act', 'data-uid', 'data-template', 'data-input', 'data-dialog', 'data-restart', 'data-term', 'data-stepup', 'data-stepdown', 'data-show-ending', 'data-newrun'];
+function withFocusKept(container, renderFn) {
+  const el = document.activeElement;
+  const sel = el && container.contains(el) ? FOCUS_KEYS.filter((k) => el.hasAttribute(k)).map((k) => `[${k}="${CSS.escape(el.getAttribute(k))}"]`).join('') : '';
+  renderFn();
+  if (sel) container.querySelector(sel)?.focus({ preventScroll: true });
+}
+
 // Re-rendering between pointerdown and pointerup replaces the element under the cursor and the browser drops the click,
 // so renders requested while a pointer is down wait until it is released.
 let pointerDown = false; const deferred = new Set();
@@ -49,13 +58,13 @@ document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
 document.addEventListener('pointerup', () => { pointerDown = false;
   setTimeout(() => { if (deferred.has('top')) renderTop(); if (deferred.has('dash')) renderDash(true, false); deferred.clear(); }, 0); }, true);
 const renderTop = () => { if (pointerDown) { deferred.add('top'); return; } const el = document.getElementById('top'); if (!el) return;
-  el.innerHTML = renderTopbar(run, ui, clock);
+  withFocusKept(el, () => { el.innerHTML = renderTopbar(run, ui, clock); });
   if (!applyingHighlight) { applyingHighlight = true; try { applyHighlight(); } finally { applyingHighlight = false; } } };
 function renderDash(force = false, cooldown = true) {
   const el = document.getElementById('dash'); if (!el) return;
   if (pointerDown) { deferred.add('dash'); return; }
   if (!force && el.contains(document.activeElement) && document.activeElement.matches('input')) return; // don't steal focus while typing
-  el.innerHTML = renderDashboard(run, ui); if (cooldown) renderedAt = performance.now();
+  withFocusKept(el, () => { el.innerHTML = renderDashboard(run, ui); }); if (cooldown) renderedAt = performance.now();
   if (!applyingHighlight) { applyingHighlight = true; try { applyHighlight(); } finally { applyingHighlight = false; } }
 }
 let applyingHighlight = false;

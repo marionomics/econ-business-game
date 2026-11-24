@@ -5,7 +5,9 @@ const effect = (s, e) => { s.effects.push(e); };
 export const WILDCARDS = {
   arancel: { crisis: true, apply: (s, w) => { effect(s, { kind: 'cost', add: w.tariff }); s.shocks.push({ id: 'arancel', month: s.month, kind: 'cost' }); } },
   renta: { crisis: true, apply: (s, w) => { effect(s, { kind: 'fixed', add: w.rent }); s.shocks.push({ id: 'renta', month: s.month, kind: 'fixed' }); } },
-  salud: { crisis: true, apply: (s) => { effect(s, { kind: 'demand', segment: s.line, mult: 0.8, until: s.month + 6 }); s.shocks.push({ id: 'salud', month: s.month, kind: 'demand', until: s.month + 6 }); } },
+  salud: { crisis: true, apply: (s) => { // hits every segment the firm actually sells (after a repositioning there may be two)
+    const segs = new Set(s.products.filter((p) => p.active).map((p) => p.segment)); if (!segs.size) segs.add(s.line);
+    for (const segment of segs) effect(s, { kind: 'demand', segment, mult: 0.8, until: s.month + 6 }); s.shocks.push({ id: 'salud', month: s.month, kind: 'demand', until: s.month + 6 }); } },
   recesion: { crisis: true, apply: (s) => { effect(s, { kind: 'demand', segment: 'all', mult: 0.85, until: s.month + 6 }); s.shocks.push({ id: 'recesion', month: s.month, kind: 'demand', until: s.month + 6 }); } },
   marca_blanca: { crisis: true, line: 'generico', apply: (s) => { effect(s, { kind: 'demand', segment: 'generico', mult: 0.8 }); s.shocks.push({ id: 'marca_blanca', month: s.month, kind: 'demand' }); } },
   viral: { crisis: false, apply: (s, w, params) => {
